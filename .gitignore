@@ -1,0 +1,13 @@
+infra/.env.local-dev
+infra/credentials.local.json
+dist/
+node_modules/
+.env
+*.local.json
+infra/.env
+infra/credentials.json
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform.lock.hcl

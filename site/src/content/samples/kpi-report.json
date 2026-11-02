@@ -1,0 +1,123 @@
+{
+  "business": "Northside Coffee Co.",
+  "demo": true,
+  "period": {
+    "from": "2026-10-22",
+    "to": "2026-10-28"
+  },
+  "kpis": [
+    {
+      "label": "Revenue",
+      "current": 21734.83,
+      "previous": 20718.35,
+      "changePct": 4.9,
+      "unit": "$",
+      "goodWhenUp": true
+    },
+    {
+      "label": "Orders",
+      "current": 515,
+      "previous": 499,
+      "changePct": 3.2,
+      "unit": "",
+      "goodWhenUp": true
+    },
+    {
+      "label": "Average order value",
+      "current": 42.2,
+      "previous": 41.52,
+      "changePct": 1.6,
+      "unit": "$",
+      "goodWhenUp": true
+    },
+    {
+      "label": "New customers",
+      "current": 208,
+      "previous": 192,
+      "changePct": 8.3,
+      "unit": "",
+      "goodWhenUp": true
+    },
+    {
+      "label": "Conversion rate",
+      "current": 3.33,
+      "previous": 3.45,
+      "changePct": -3.4,
+      "unit": "%",
+      "goodWhenUp": true
+    },
+    {
+      "label": "Refund rate",
+      "current": 2.88,
+      "previous": 2,
+      "changePct": 44.2,
+      "unit": "%",
+      "goodWhenUp": false
+    }
+  ],
+  "bestDay": {
+    "date": "2026-10-25",
+    "revenue": 4807.3
+  },
+  "worstDay": {
+    "date": "2026-10-23",
+    "revenue": 2319.11
+  },
+  "daily": [
+    {
+      "date": "2026-10-22",
+      "revenue": 2901.38,
+      "orders": 67
+    },
+    {
+      "date": "2026-10-23",
+      "revenue": 2319.11,
+      "orders": 61
+    },
+    {
+      "date": "2026-10-24",
+      "revenue": 3432.57,
+      "orders": 90
+    },
+    {
+      "date": "2026-10-25",
+      "revenue": 4807.3,
+      "orders": 104
+    },
+    {
+      "date": "2026-10-26",
+      "revenue": 2743.12,
+      "orders": 59
+    },
+    {
+      "date": "2026-10-27",
+      "revenue": 2784.42,
+      "orders": 65
+    },
+    {
+      "date": "2026-10-28",
+      "revenue": 2746.93,
+      "orders": 69
+    }
+  ],
+  "summary": {
+    "headline": "Refund rate spiked 44.2% despite total revenue growing 4.9%.",
+    "summary": "Weekly revenue rose 4.9% to $21,734.83, driven by a strong peak of $4,807.30 on October 25 and an 8.3% increase in new customers. However, conversion rate slipped 3.4% to 3.33%, and the refund rate rose sharply to 2.88%. We need to address quality control immediately while maintaining customer acquisition momentum.",
+    "wins": [
+      "Revenue grew 4.9% to $21,734.83, capped by a high of $4,807.30 on October 25.",
+      "New customer growth increased 8.3% to 208 (up from 192).",
+      "Orders increased 3.2% to 515, lifting Average Order Value 1.6% to $42.20."
+    ],
+    "risks": [
+      "Refund rate jumped 44.2% from 2% to 2.88%, eroding net profits.",
+      "Conversion rate dropped 3.4% down to 3.33% from 3.45%.",
+      "Mid-week sales dropped significantly, bottoming at $2,319.11 on October 23."
+    ],
+    "actions": [
+      "Audit all customer return logs from the past week to pinpoint the root cause of the 44.2% refund spike.",
+      "Review the marketing and store traffic from October 25 to see how to replicate the $4,807.30 daily revenue peak.",
+      "Inspect the checkout user experience to recover the 3.4% loss in conversion rate."
+    ]
+  },
+  "html": "<div style=\"font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;color:#141311\">\n  <p style=\"font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a867c;margin:0\">Northside Coffee Co. · 2026-10-22 → 2026-10-28</p>\n  <h1 style=\"font-size:22px;line-height:1.25;margin:8px 0 12px\">Refund rate spiked 44.2% despite total revenue growing 4.9%.</h1>\n  <p style=\"font-size:15px;line-height:1.55;color:#33312c\">Weekly revenue rose 4.9% to $21,734.83, driven by a strong peak of $4,807.30 on October 25 and an 8.3% increase in new customers. However, conversion rate slipped 3.4% to 3.33%, and the refund rate rose sharply to 2.88%. We need to address quality control immediately while maintaining customer acquisition momentum.</p>\n  <table style=\"width:100%;border-collapse:collapse;border-top:1px solid #e2ddd0;border-bottom:1px solid #e2ddd0;margin:16px 0;font-size:14px\"><tr><td style=\"padding:8px 0;color:#55524b\">Revenue</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$21,735</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#0a7a2f\">▲ 4.9%</span></td></tr><tr><td style=\"padding:8px 0;color:#55524b\">Orders</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">515</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#0a7a2f\">▲ 3.2%</span></td></tr><tr><td style=\"padding:8px 0;color:#55524b\">Average order value</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$42</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#0a7a2f\">▲ 1.6%</span></td></tr><tr><td style=\"padding:8px 0;color:#55524b\">New customers</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">208</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#0a7a2f\">▲ 8.3%</span></td></tr><tr><td style=\"padding:8px 0;color:#55524b\">Conversion rate</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">3.3%</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#b42323\">▼ 3.4%</span></td></tr><tr><td style=\"padding:8px 0;color:#55524b\">Refund rate</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">2.9%</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\"><span style=\"color:#b42323\">▲ 44.2%</span></td></tr></table>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Wins</h3><ul style=\"padding-left:18px;font-size:14px\"><li style=\"margin:4px 0\">Revenue grew 4.9% to $21,734.83, capped by a high of $4,807.30 on October 25.</li><li style=\"margin:4px 0\">New customer growth increased 8.3% to 208 (up from 192).</li><li style=\"margin:4px 0\">Orders increased 3.2% to 515, lifting Average Order Value 1.6% to $42.20.</li></ul>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Watch</h3><ul style=\"padding-left:18px;font-size:14px\"><li style=\"margin:4px 0\">Refund rate jumped 44.2% from 2% to 2.88%, eroding net profits.</li><li style=\"margin:4px 0\">Conversion rate dropped 3.4% down to 3.33% from 3.45%.</li><li style=\"margin:4px 0\">Mid-week sales dropped significantly, bottoming at $2,319.11 on October 23.</li></ul>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Do this week</h3><ol style=\"padding-left:18px;font-size:14px\"><li style=\"margin:4px 0\">Audit all customer return logs from the past week to pinpoint the root cause of the 44.2% refund spike.</li><li style=\"margin:4px 0\">Review the marketing and store traffic from October 25 to see how to replicate the $4,807.30 daily revenue peak.</li><li style=\"margin:4px 0\">Inspect the checkout user experience to recover the 3.4% loss in conversion rate.</li></ol>\n</div>"
+}

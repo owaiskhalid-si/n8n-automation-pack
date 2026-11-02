@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# First-boot setup (cloud-init user data). Rendered by Terraform.
+set -euxo pipefail
+exec > >(tee -a /var/log/n8n-bootstrap.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y docker.io docker-compose-v2 git cron unzip
+snap install aws-cli --classic
+systemctl enable --now docker
+
+# 2 GB swap so n8n + Postgres never OOM on a 2 GB instance.
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+APP=/opt/n8n-automation-pack
+[ -d "$APP/.git" ] || git clone --depth 1 "${repo_url}" "$APP"
+
+secret() {
+  aws ssm get-parameter --region "${region}" --with-decryption --name "/${project}/$1" --query Parameter.Value --output text
+}
+
+umask 077
+cat > "$APP/infra/.env" <<ENV
+N8N_DOMAIN=${domain}
+ACME_EMAIL=${acme_email}
+N8N_ENCRYPTION_KEY=$(secret encryption_key)
+POSTGRES_PASSWORD=$(secret postgres_password)
+TIMEZONE=${timezone}
+EDITOR_ALLOWED_IPS=${editor_allowed_cidrs}
+BACKUP_BUCKET=${backup_bucket}
+ENV
+
+cd "$APP/infra"
+docker compose up -d
+
+echo "15 3 * * * root $APP/infra/scripts/backup.sh >> /var/log/n8n-backup.log 2>&1" > /etc/cron.d/n8n-backup
+chmod 644 /etc/cron.d/n8n-backup

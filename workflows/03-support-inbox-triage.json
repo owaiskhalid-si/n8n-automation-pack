@@ -1,0 +1,677 @@
+{
+  "id": "BdpvhkWbnq5m4XFD",
+  "name": "Support Inbox Triage — classify, prioritise & draft replies",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Support Inbox Triage\nTurns a shared inbox into a prioritised queue.\n\n- Gemini returns **category · urgency · sentiment · summary · reply draft**\n- **Spam** is marked read and skipped\n- **High / critical** or angry customers are escalated to `#support` on Slack\n- Every real ticket gets a **draft reply in the same Gmail thread** — a human reviews and sends\n\nTest it without Gmail: `POST /support-triage` with `{ from, subject, body, demo: true }`.",
+        "height": 400,
+        "width": 400,
+        "color": 4
+      },
+      "id": "bd095792-9f07-5f55-a2cd-c2d76fcd677c",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ],
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "2ec0b051-ad70-54b7-a312-a2df84e4398b",
+      "name": "New support email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "77f80ef0-3794-5884-a0be-292d3ab39d0b",
+              "name": "from",
+              "value": "={{ $json.from?.value?.[0]?.address || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "3c057eaf-acfb-5824-ab91-03ff58b60e0f",
+              "name": "fromName",
+              "value": "={{ $json.from?.value?.[0]?.name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e843b929-34ae-5d27-a67c-88e53250d2b0",
+              "name": "subject",
+              "value": "={{ $json.subject || '(no subject)' }}",
+              "type": "string"
+            },
+            {
+              "id": "482bee08-10ae-5c22-a289-392d609df614",
+              "name": "body",
+              "value": "={{ String($json.text || '').slice(0, 6000) }}",
+              "type": "string"
+            },
+            {
+              "id": "cdb62b62-56e6-5359-a22f-6d89e49badda",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "85dc5c81-f2b1-57da-ae70-8be04899110c",
+              "name": "messageId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "7cb9c00a-b959-5480-a6db-3ad211c4232c",
+              "name": "source",
+              "value": "gmail",
+              "type": "string"
+            },
+            {
+              "id": "4d3fd79d-f2a2-5b2d-ab3e-e2aa2367a687",
+              "name": "demo",
+              "value": "={{ false }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "2e67c952-bc41-5cab-a274-9b7dc30b9f48",
+      "name": "Email payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-triage",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "05bc2d52-18b0-53cd-a5cd-0c6c54dde1a3",
+      "name": "Ticket webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        360
+      ],
+      "webhookId": "e1d9e785-0ec6-56ce-ad31-89e84465accd"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "93ba04df-bc17-53e2-ae4a-5c4f256b60cf",
+              "name": "from",
+              "value": "={{ $json.body.from || 'customer@example.com' }}",
+              "type": "string"
+            },
+            {
+              "id": "df6ab37f-b317-5fce-a314-51bb5e5268ee",
+              "name": "fromName",
+              "value": "={{ $json.body.fromName || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e4aa7abf-370c-573a-aa44-b2377648712f",
+              "name": "subject",
+              "value": "={{ $json.body.subject || '(no subject)' }}",
+              "type": "string"
+            },
+            {
+              "id": "ac8edeac-0791-5b6a-a264-390d7af8c920",
+              "name": "body",
+              "value": "={{ String($json.body.body || '').slice(0, 6000) }}",
+              "type": "string"
+            },
+            {
+              "id": "5123dd05-2a59-5bc3-aad2-317dde668456",
+              "name": "threadId",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "e47313de-2c64-535a-aa6e-15e66cbf349a",
+              "name": "messageId",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "64a40ef8-f0ba-579b-a030-39b5671e4448",
+              "name": "source",
+              "value": "webhook",
+              "type": "string"
+            },
+            {
+              "id": "2d86eaa9-7186-5386-a256-67f5138c0afb",
+              "name": "demo",
+              "value": "={{ $json.body.demo === true }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "299e259e-e9ac-58b0-af1a-ca4b36229825",
+      "name": "Webhook payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e6ad0e1-6ff1-5ef1-a55d-c4999c20e4b4",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "79c97185-6794-5017-aba7-6145f49fa880",
+      "name": "Normalize email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=From: {{ $json.fromName }} <{{ $json.from }}>\nSubject: {{ $json.subject }}\n\n\"\"\"\n{{ $json.body }}\n\"\"\"",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You are the head of customer support for a B2B SaaS company. Triage each incoming email.\n\nUrgency rubric:\n- critical: outage, data loss, security issue, or payment taken in error\n- high: customer blocked from core work, or threatening to cancel\n- normal: questions and non-blocking problems\n- low: feedback, feature ideas, newsletters\n\nneedsHuman is true for refunds, legal or security topics, angry customers, and anything you are unsure about.\n\nReply draft: warm, concise (under 130 words), acknowledge the specific problem, give the next step. Never promise refunds, credits or dates. Sign off as “The Support Team”. Leave suggestedReply empty for spam."
+            }
+          ]
+        }
+      },
+      "id": "0c326965-4818-53f3-a473-899818f4262d",
+      "name": "Triage email",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.2,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "4b6ffc02-9d3e-5bdc-a5dc-a999285d3765",
+      "name": "Gemini 3.5 Flash-Lite",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"category\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"billing\",\n        \"bug_report\",\n        \"account_access\",\n        \"feature_request\",\n        \"sales_inquiry\",\n        \"cancellation\",\n        \"spam\",\n        \"other\"\n      ]\n    },\n    \"urgency\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"low\",\n        \"normal\",\n        \"high\",\n        \"critical\"\n      ]\n    },\n    \"sentiment\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"positive\",\n        \"neutral\",\n        \"negative\",\n        \"angry\"\n      ]\n    },\n    \"summary\": {\n      \"type\": \"string\",\n      \"description\": \"One sentence\"\n    },\n    \"customerGoal\": {\n      \"type\": \"string\"\n    },\n    \"language\": {\n      \"type\": \"string\",\n      \"description\": \"ISO 639-1 code\"\n    },\n    \"needsHuman\": {\n      \"type\": \"boolean\"\n    },\n    \"tags\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"suggestedReply\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"category\",\n    \"urgency\",\n    \"sentiment\",\n    \"summary\",\n    \"customerGoal\",\n    \"language\",\n    \"needsHuman\",\n    \"tags\",\n    \"suggestedReply\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "0b41b249-44c4-54bf-aaf7-4626de8b36fb",
+      "name": "Triage schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        860,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "53865c9d-2ed4-5d2a-ae48-2c5912190689",
+              "name": "email",
+              "value": "={{ $('Normalize email').item.json }}",
+              "type": "object"
+            },
+            {
+              "id": "5eba6b78-9bb6-51a0-a408-f5350a9708fc",
+              "name": "triage",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "59367b9c-98f9-5002-aea2-7aba01667877",
+      "name": "Ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, subject: $json.email.subject, ...$json.triage } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "35aeced1-874c-54b5-aebe-f32128d2ffb1",
+      "name": "Return triage",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1260,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "073c8fe9-3363-5fc7-ac67-3f331c6bab36",
+              "leftValue": "={{ $json.email.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7e3d7f3f-e843-5a73-ab3d-6d890ec66fdd",
+      "name": "Live run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1260,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "98ac039f-03dc-50ca-a241-f23b0cd2f381",
+                    "leftValue": "={{ $json.triage.category }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Spam"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b7d1e0a2-0c1f-4c55-9d6f-0a1b2c3d4e01",
+                    "leftValue": "={{ ['high', 'critical'].includes($json.triage.urgency) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "b7d1e0a2-0c1f-4c55-9d6f-0a1b2c3d4e02",
+                    "leftValue": "={{ $json.triage.sentiment === 'angry' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Escalate"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Standard"
+        }
+      },
+      "id": "d1baaa42-c556-528c-a51a-e453f29804a6",
+      "name": "Route ticket",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1500,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.email.messageId }}"
+      },
+      "id": "7c961bae-921d-5feb-a375-4e12370e23d1",
+      "name": "Mark spam as read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#support"
+        },
+        "text": "=:rotating_light: *{{ $json.triage.urgency.toUpperCase() }}* · {{ $json.triage.category.replace('_', ' ') }} · {{ $json.triage.sentiment }}\n*{{ $json.email.subject }}* — {{ $json.email.fromName || $json.email.from }}\n> {{ $json.triage.summary }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "4ed5b81b-2d68-59a5-a564-6ecb29eb9a0a",
+      "name": "Escalate to #support",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1760,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('Ticket').item.json.email.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Ticket').item.json.triage.suggestedReply }}",
+        "options": {
+          "threadId": "={{ $('Ticket').item.json.email.threadId }}",
+          "sendTo": "={{ $('Ticket').item.json.email.from }}"
+        }
+      },
+      "id": "85bbe844-e854-5a64-a7ab-b68394228a71",
+      "name": "Draft reply in thread",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2000,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.5 Flash-Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Triage email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Triage email",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New support email": {
+      "main": [
+        [
+          {
+            "node": "Email payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email payload": {
+      "main": [
+        [
+          {
+            "node": "Normalize email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket webhook": {
+      "main": [
+        [
+          {
+            "node": "Webhook payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook payload": {
+      "main": [
+        [
+          {
+            "node": "Normalize email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize email": {
+      "main": [
+        [
+          {
+            "node": "Triage email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage email": {
+      "main": [
+        [
+          {
+            "node": "Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket": {
+      "main": [
+        [
+          {
+            "node": "Return triage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run?": {
+      "main": [
+        [
+          {
+            "node": "Route ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route ticket": {
+      "main": [
+        [
+          {
+            "node": "Mark spam as read",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalate to #support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft reply in thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate to #support": {
+      "main": [
+        [
+          {
+            "node": "Draft reply in thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Reads every new support email, classifies it (billing, bug, access, cancellation, spam…), scores urgency and sentiment, escalates urgent tickets to Slack and leaves a ready-to-send draft reply in the Gmail thread."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Customer support"
+    },
+    {
+      "name": "Email"
+    }
+  ]
+}

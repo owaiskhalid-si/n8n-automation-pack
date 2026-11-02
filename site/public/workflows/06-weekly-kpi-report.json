@@ -1,0 +1,446 @@
+{
+  "id": "KrzCBrH7b5gI4nTq",
+  "name": "Weekly KPI Report — numbers + AI executive summary",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Weekly KPI Report\n**Monday 08:00** → Postgres → KPIs (revenue, orders, AOV, new customers, conversion, refund rate — week over week) → Gemini writes the story → HTML email + Slack.\n\nThe KPI maths is done in code, not by the model — **Gemini only explains numbers it is given**.\n\nWebhook `POST /kpi-report` returns the full report as JSON + HTML; with no body it uses realistic sample data.",
+        "height": 330,
+        "width": 440,
+        "color": 4
+      },
+      "id": "d07bc02d-d3ff-57af-ad1e-8055d7101225",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "1f43153d-fce0-5a1a-adee-869be22ec1b8",
+      "name": "Every Monday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select date_trunc('day', o.created_at)::date as day,\n       sum(o.total)                          as revenue,\n       count(*)                              as orders,\n       count(*) filter (where o.is_first_order) as new_customers,\n       coalesce(sum(o.refunded_amount), 0)   as refunds,\n       max(t.visitors)                       as visitors\nfrom orders o\nleft join daily_traffic t on t.day = date_trunc('day', o.created_at)::date\nwhere o.created_at >= current_date - interval '14 days' and o.created_at < current_date\ngroup by 1\norder by 1;",
+        "options": {}
+      },
+      "id": "528d1952-84f0-5c8b-a890-4c5732deaedf",
+      "name": "Last 14 days of orders",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Postgres returns one row per day — fold them into the shape the KPI step expects.\nreturn [{\n  json: {\n    business: 'Your business',\n    demo: false,\n    days: $input.all().map(({ json: r }) => ({\n      date: String(r.day).slice(0, 10),\n      revenue: Number(r.revenue) || 0,\n      orders: Number(r.orders) || 0,\n      newCustomers: Number(r.new_customers) || 0,\n      refunds: Number(r.refunds) || 0,\n      visitors: Number(r.visitors) || 0,\n    })),\n  },\n}];"
+      },
+      "id": "6bf731c2-3ab3-5564-aa71-3d6cde02525e",
+      "name": "Rows → days",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kpi-report",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b0d65302-24b7-5629-a1a0-bd634e9589b4",
+      "name": "Report webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        340
+      ],
+      "webhookId": "2f6eeb2f-00a2-5e17-ad14-8c6977d203e2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use posted numbers if provided, otherwise generate 14 days of realistic sample data.\nconst body = $json.body ?? {};\nif (Array.isArray(body.days) && body.days.length >= 14) {\n  return [{ json: { business: body.business || 'Your business', demo: body.demo === true, days: body.days.slice(-14) } }];\n}\nconst seed = [...String(body.business || 'Northside Coffee Co.')].reduce((s, c) => s + c.charCodeAt(0), 0);\nlet x = seed;\nconst rand = () => ((x = (x * 9301 + 49297) % 233280) / 233280);\nconst start = DateTime.now().startOf('day').minus({ days: 14 });\nconst days = Array.from({ length: 14 }, (_, i) => {\n  const d = start.plus({ days: i });\n  const weekend = d.weekday >= 6;\n  const growth = i >= 7 ? 1.08 : 1;\n  const visitors = Math.round((weekend ? 2600 : 1900) * growth * (0.9 + rand() * 0.2));\n  const orders = Math.round(visitors * (0.031 + rand() * 0.006));\n  const aov = 38 + rand() * 9;\n  return {\n    date: d.toISODate(),\n    visitors,\n    orders,\n    revenue: Math.round(orders * aov * 100) / 100,\n    newCustomers: Math.round(orders * (0.35 + rand() * 0.1)),\n    refunds: Math.round(orders * aov * (i === 11 ? 0.09 : 0.02) * 100) / 100,\n  };\n});\nreturn [{ json: { business: body.business || 'Northside Coffee Co.', demo: body.demo === true, days } }];"
+      },
+      "id": "6c7df8ee-6aa6-5a04-a942-04733ac55c93",
+      "name": "Posted or sample data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Week-over-week KPIs from 14 days of daily data.\nconst { business, demo, days } = $json;\nconst sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));\nconst prev = sorted.slice(-14, -7);\nconst curr = sorted.slice(-7);\nconst sum = (arr, k) => arr.reduce((s, d) => s + (Number(d[k]) || 0), 0);\nconst pct = (a, b) => (b ? Math.round(((a - b) / b) * 1000) / 10 : null);\nconst r2 = (n) => Math.round(n * 100) / 100;\n\nconst metric = (label, c, p, unit = '', goodWhenUp = true) => ({ label, current: r2(c), previous: r2(p), changePct: pct(c, p), unit, goodWhenUp });\nconst rev = sum(curr, 'revenue'), revP = sum(prev, 'revenue');\nconst ord = sum(curr, 'orders'), ordP = sum(prev, 'orders');\nconst vis = sum(curr, 'visitors'), visP = sum(prev, 'visitors');\nconst ref = sum(curr, 'refunds'), refP = sum(prev, 'refunds');\n\nconst kpis = [\n  metric('Revenue', rev, revP, '$'),\n  metric('Orders', ord, ordP),\n  metric('Average order value', ord ? rev / ord : 0, ordP ? revP / ordP : 0, '$'),\n  metric('New customers', sum(curr, 'newCustomers'), sum(prev, 'newCustomers')),\n  metric('Conversion rate', vis ? (ord / vis) * 100 : 0, visP ? (ordP / visP) * 100 : 0, '%'),\n  metric('Refund rate', rev ? (ref / rev) * 100 : 0, revP ? (refP / revP) * 100 : 0, '%', false),\n];\nconst best = curr.reduce((a, b) => (b.revenue > a.revenue ? b : a), curr[0]);\nconst worst = curr.reduce((a, b) => (b.revenue < a.revenue ? b : a), curr[0]);\n\nreturn [{\n  json: {\n    business,\n    demo,\n    period: { from: curr[0]?.date, to: curr[curr.length - 1]?.date },\n    kpis,\n    bestDay: { date: best?.date, revenue: best?.revenue },\n    worstDay: { date: worst?.date, revenue: worst?.revenue },\n    daily: curr.map((d) => ({ date: d.date, revenue: d.revenue, orders: d.orders })),\n  },\n}];"
+      },
+      "id": "a1bf6f00-bbf1-501b-a6aa-e8b92b73ff70",
+      "name": "Compute KPIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Business: {{ $json.business }}\nPeriod: {{ $json.period.from }} to {{ $json.period.to }} vs the previous 7 days\n\nKPIs:\n{{ JSON.stringify($json.kpis, null, 2) }}\n\nBest day: {{ JSON.stringify($json.bestDay) }}\nWorst day: {{ JSON.stringify($json.worstDay) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You are a sharp, plain-spoken COO writing the Monday update for a small business owner.\nUse only the numbers provided — never invent figures. Quote the most important changes with their percentages.\nHeadline: under 12 words, states the single most important change.\nSummary: 2–3 sentences. Wins and risks: 2–3 bullets each. Actions: 3 specific, doable-this-week steps."
+            }
+          ]
+        }
+      },
+      "id": "eff5e8b6-1658-5b27-ac50-823f86858f2f",
+      "name": "Write executive summary",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        920,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {
+          "temperature": 0.4,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "7e684daa-e1ed-5c91-a62d-72f6e81232d0",
+      "name": "Gemini 3.6 Flash",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"headline\": {\n      \"type\": \"string\"\n    },\n    \"summary\": {\n      \"type\": \"string\"\n    },\n    \"wins\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"actions\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"headline\",\n    \"summary\",\n    \"wins\",\n    \"risks\",\n    \"actions\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "8d56f5a6-5baf-579f-a42b-40486efe91d8",
+      "name": "Summary schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1060,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inline-styled HTML so the report renders the same in Gmail, Outlook and Slack previews.\nconst r = $('Compute KPIs').first().json;\nconst s = $json.output;\nconst fmt = (m) => {\n  const v = m.unit === '$' ? '$' + m.current.toLocaleString('en-CA', { maximumFractionDigits: 0 }) : m.unit === '%' ? m.current.toFixed(1) + '%' : m.current.toLocaleString('en-CA');\n  return v;\n};\nconst delta = (m) => {\n  if (m.changePct === null) return '';\n  const up = m.changePct >= 0;\n  const good = up === m.goodWhenUp;\n  return `<span style=\"color:${good ? '#0a7a2f' : '#b42323'}\">${up ? '▲' : '▼'} ${Math.abs(m.changePct)}%</span>`;\n};\nconst rows = r.kpis.map((m) => `<tr><td style=\"padding:8px 0;color:#55524b\">${m.label}</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">${fmt(m)}</td><td style=\"padding:8px 0 8px 12px;text-align:right;font-size:13px\">${delta(m)}</td></tr>`).join('');\nconst list = (items) => items.map((i) => `<li style=\"margin:4px 0\">${i}</li>`).join('');\n\nconst html = `<div style=\"font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;color:#141311\">\n  <p style=\"font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a867c;margin:0\">${r.business} · ${r.period.from} → ${r.period.to}</p>\n  <h1 style=\"font-size:22px;line-height:1.25;margin:8px 0 12px\">${s.headline}</h1>\n  <p style=\"font-size:15px;line-height:1.55;color:#33312c\">${s.summary}</p>\n  <table style=\"width:100%;border-collapse:collapse;border-top:1px solid #e2ddd0;border-bottom:1px solid #e2ddd0;margin:16px 0;font-size:14px\">${rows}</table>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Wins</h3><ul style=\"padding-left:18px;font-size:14px\">${list(s.wins)}</ul>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Watch</h3><ul style=\"padding-left:18px;font-size:14px\">${list(s.risks)}</ul>\n  <h3 style=\"font-size:14px;margin:18px 0 4px\">Do this week</h3><ol style=\"padding-left:18px;font-size:14px\">${list(s.actions)}</ol>\n</div>`;\n\nreturn [{ json: { ...r, summary: s, html } }];"
+      },
+      "id": "587a1fc7-6466-5e85-ad6e-4ceeab119d49",
+      "name": "Render HTML report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ae2d29a9-90c5-53e5-aec5-c156a38634fc",
+      "name": "Return report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1460,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "09c4eba1-66eb-5b54-a1c7-3c6fa9bd74c8",
+              "leftValue": "={{ $json.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "40f5ce37-c7fa-553b-a9b7-e4c168974de1",
+      "name": "Live run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1460,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Reports <reports@example.com>",
+        "toEmail": "owner@example.com",
+        "subject": "=Weekly report: {{ $json.summary.headline }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "579c4de7-a5a2-5af4-a85b-35dcb5aaf7b2",
+      "name": "Email the report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#leadership"
+        },
+        "text": "=*{{ $('Render HTML report').item.json.summary.headline }}*\n{{ $('Render HTML report').item.json.summary.summary }}\n\n{{ $('Render HTML report').item.json.kpis.map(k => '• ' + k.label + ': ' + (k.changePct === null ? 'n/a' : (k.changePct >= 0 ? '+' : '') + k.changePct + '%')).join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "230ab78c-8db8-5ea0-a688-965ec9b2db45",
+      "name": "Post digest to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1940,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.6 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write executive summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write executive summary",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Monday 8am": {
+      "main": [
+        [
+          {
+            "node": "Last 14 days of orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 14 days of orders": {
+      "main": [
+        [
+          {
+            "node": "Rows → days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows → days": {
+      "main": [
+        [
+          {
+            "node": "Compute KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report webhook": {
+      "main": [
+        [
+          {
+            "node": "Posted or sample data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Posted or sample data": {
+      "main": [
+        [
+          {
+            "node": "Compute KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute KPIs": {
+      "main": [
+        [
+          {
+            "node": "Write executive summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write executive summary": {
+      "main": [
+        [
+          {
+            "node": "Render HTML report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render HTML report": {
+      "main": [
+        [
+          {
+            "node": "Return report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run?": {
+      "main": [
+        [
+          {
+            "node": "Email the report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email the report": {
+      "main": [
+        [
+          {
+            "node": "Post digest to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Every Monday at 8am: pulls the last 14 days of orders from Postgres, computes week-over-week KPIs, has Gemini write a plain-English executive summary with wins, risks and actions, and emails a clean HTML report and a Slack digest."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Reporting"
+    },
+    {
+      "name": "Analytics"
+    }
+  ]
+}

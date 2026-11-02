@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "lead": {
+    "name": "Sarah Chen",
+    "company": "Maple Dental"
+  },
+  "score": 90,
+  "tier": "hot",
+  "intent": "Sarah wants a multi-location online booking system with automated SMS reminders for her 3 dental clinics.",
+  "servicesNeeded": [
+    "booking systems",
+    "AI automations"
+  ],
+  "budgetFit": "strong",
+  "isDecisionMaker": true,
+  "reasons": [
+    "Owner role confirms decision-making authority",
+    "Budget of CA$15k aligns well with project scope",
+    "Clear, urgent timeline of 6 weeks",
+    "Specific technical requirement (3 clinics, SMS reminders)"
+  ],
+  "nextAction": "Schedule a 15-minute discovery call to discuss clinic workflows and SMS requirements.",
+  "replyDraft": "Hi Sarah, thanks for reaching out! Building a seamless online booking system with automated SMS reminders across your 3 Maple Dental clinics sounds like a great project, and CA$15k is a healthy budget for a 6-week timeline. We’ve built similar scheduling and notification flows for healthcare practices before. Do you have 15 minutes this Thursday for a quick chat to map out your patient workflow?"
+}

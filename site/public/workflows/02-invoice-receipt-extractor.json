@@ -1,0 +1,650 @@
+{
+  "id": "KHS39hnCeJtKzMET",
+  "name": "Invoice & Receipt Extractor — AI bookkeeping with validation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Invoice & Receipt Extractor\nTwo entry points, one pipeline:\n- **Gmail**: new emails with a PDF invoice attached\n- **Webhook**: `POST { text }` from any app\n\nGemini extracts vendor, dates, taxes (GST · HST · PST · QST), line items and a spend category. A Code step **re-adds the numbers** — if line items, taxes and total don't reconcile, the document is marked `needs_review` and posted to `#finance`.\n\n**Setup:** Google Gemini, Gmail OAuth, Google Sheets and Slack credentials.",
+        "height": 420,
+        "width": 400,
+        "color": 4
+      },
+      "id": "8b55888f-6ba8-5401-a298-0c0896e98d8a",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment filename:pdf (invoice OR receipt OR bill)",
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": true,
+          "dataPropertyAttachmentsPrefixName": "attachment_"
+        }
+      },
+      "id": "fd052dc3-efc2-5e7a-a3e8-d326fd8678fe",
+      "name": "New invoice email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "id": "33d627f5-0fd6-5095-a7b7-03e6fe2b9621",
+      "name": "Read PDF text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a9ea853-521a-541c-aa99-1fc92837d91b",
+              "name": "text",
+              "value": "={{ String($json.text || '').slice(0, 20000) }}",
+              "type": "string"
+            },
+            {
+              "id": "e1d604b1-9d99-5e01-a170-9e6c19da7b8e",
+              "name": "fileName",
+              "value": "={{ $('New invoice email').item.binary?.attachment_0?.fileName || 'attachment.pdf' }}",
+              "type": "string"
+            },
+            {
+              "id": "b1b11fca-c86e-56ed-ad06-5fa78177fa00",
+              "name": "source",
+              "value": "gmail",
+              "type": "string"
+            },
+            {
+              "id": "7baf6f40-fe0a-5f59-a29d-e0e8eb9b1569",
+              "name": "demo",
+              "value": "={{ false }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "26a8d40e-abb4-5d48-a69b-bba81325b2de",
+      "name": "Email document",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-extractor",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "98072a2f-4060-58b7-a21b-e1bdef567ea5",
+      "name": "Document webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        360
+      ],
+      "webhookId": "7f7235a5-ca79-5d58-a29a-98c24706e08b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd68e404-09c7-5908-aa0c-9fa1f580ef91",
+              "name": "text",
+              "value": "={{ String($json.body.text || '').slice(0, 20000) }}",
+              "type": "string"
+            },
+            {
+              "id": "173dac33-8788-5d65-a4b7-6f3c74d289b8",
+              "name": "fileName",
+              "value": "={{ $json.body.fileName || 'pasted-text' }}",
+              "type": "string"
+            },
+            {
+              "id": "abbacb59-0790-5ff1-afb9-7a1ddac1b9d1",
+              "name": "source",
+              "value": "webhook",
+              "type": "string"
+            },
+            {
+              "id": "af2fb02f-585a-5a86-a79c-4f0c88da808a",
+              "name": "demo",
+              "value": "={{ $json.body.demo === true }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "8f7dfed8-79d0-5540-ad51-a95b9937aef3",
+      "name": "Webhook document",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2673663f-cd82-5125-ac2d-5c3dd8b6c1b2",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f693f5b8-5388-58cb-a527-dd953b5e7b49",
+      "name": "Normalize document",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=Extract the details of this invoice or receipt.\n\n---\n{{ $json.text }}\n---",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"documentType\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"invoice\",\n        \"receipt\",\n        \"credit_note\",\n        \"other\"\n      ]\n    },\n    \"vendorName\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"vendorTaxNumber\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"GST/HST business number, QST number or VAT ID if printed\"\n    },\n    \"invoiceNumber\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"invoiceDate\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"YYYY-MM-DD\"\n    },\n    \"dueDate\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"YYYY-MM-DD\"\n    },\n    \"currency\": {\n      \"type\": \"string\",\n      \"description\": \"ISO 4217 code, e.g. CAD or USD\"\n    },\n    \"subtotal\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"taxes\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"type\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"GST\",\n              \"HST\",\n              \"PST\",\n              \"QST\",\n              \"VAT\",\n              \"Sales tax\",\n              \"Other\"\n            ]\n          },\n          \"rate\": {\n            \"type\": [\n              \"number\",\n              \"null\"\n            ],\n            \"description\": \"Percent, e.g. 13 for 13%\"\n          },\n          \"amount\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"type\",\n          \"amount\"\n        ]\n      }\n    },\n    \"total\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"lineItems\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"description\": {\n            \"type\": \"string\"\n          },\n          \"quantity\": {\n            \"type\": [\n              \"number\",\n              \"null\"\n            ]\n          },\n          \"unitPrice\": {\n            \"type\": [\n              \"number\",\n              \"null\"\n            ]\n          },\n          \"amount\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"description\",\n          \"amount\"\n        ]\n      }\n    },\n    \"category\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"software\",\n        \"hardware\",\n        \"travel\",\n        \"meals\",\n        \"office\",\n        \"contractor\",\n        \"marketing\",\n        \"utilities\",\n        \"rent\",\n        \"other\"\n      ]\n    },\n    \"paymentStatus\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"paid\",\n        \"due\",\n        \"overdue\",\n        \"unknown\"\n      ]\n    }\n  },\n  \"required\": [\n    \"documentType\",\n    \"vendorName\",\n    \"invoiceDate\",\n    \"currency\",\n    \"subtotal\",\n    \"taxes\",\n    \"total\",\n    \"lineItems\",\n    \"category\",\n    \"paymentStatus\"\n  ]\n}",
+        "options": {
+          "systemPromptTemplate": "You are an accounts-payable assistant for a Canadian small business.\nExtract only what is printed on the document — never guess. Use null for missing values.\nDates must be YYYY-MM-DD. Amounts are plain numbers without currency symbols.\nList each sales tax separately (GST, HST, PST, QST) with its rate when shown.\nPick the closest spend category."
+        }
+      },
+      "id": "5001a406-7adc-506b-a271-17e464801bf0",
+      "name": "Extract invoice fields",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "1a402b86-d287-5d90-a1de-796922a0895c",
+      "name": "Gemini 3.5 Flash-Lite",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Cross-check the model's numbers so a bad extraction is flagged, never silently booked.\nconst round = (n) => Math.round((Number(n) || 0) * 100) / 100;\nconst inv = $json.output ?? {};\nconst doc = $('Normalize document').item.json;\nconst issues = [];\n\nconst lineSum = round((inv.lineItems ?? []).reduce((s, l) => s + (Number(l.amount) || 0), 0));\nconst taxSum = round((inv.taxes ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0));\nconst subtotal = round(inv.subtotal ?? lineSum);\nconst total = round(inv.total);\n\nif (!inv.vendorName) issues.push('Vendor name is missing');\nif (!inv.invoiceDate) issues.push('Invoice date is missing');\nif (!total) issues.push('Total is missing');\nif ((inv.lineItems ?? []).length && Math.abs(lineSum - subtotal) > 0.05)\n  issues.push(`Line items add up to ${lineSum.toFixed(2)} but the subtotal is ${subtotal.toFixed(2)}`);\nif (total && Math.abs(subtotal + taxSum - total) > 0.05)\n  issues.push(`Subtotal + taxes = ${(subtotal + taxSum).toFixed(2)} but the total is ${total.toFixed(2)}`);\n\nreturn {\n  json: {\n    invoice: { ...inv, subtotal, total },\n    validation: { status: issues.length ? 'needs_review' : 'ok', issues, lineItemsTotal: lineSum, taxTotal: taxSum },\n    meta: { source: doc.source, fileName: doc.fileName, demo: doc.demo, receivedAt: doc.receivedAt },\n  },\n};"
+      },
+      "id": "bb974b69-679b-56dd-a9bf-baef0ef5e7c8",
+      "name": "Validate totals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2d1af75b-8b21-55ee-a72e-4fd95ac9f342",
+      "name": "Return extraction",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2419a4dd-dbc1-5425-ac0a-a0d2b963c086",
+              "leftValue": "={{ $json.meta.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "3a7748a4-f8e5-5350-a84f-7d916291c3f0",
+      "name": "Live run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Expenses"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.invoice.invoiceDate }}",
+            "Vendor": "={{ $json.invoice.vendorName }}",
+            "Invoice #": "={{ $json.invoice.invoiceNumber }}",
+            "Category": "={{ $json.invoice.category }}",
+            "Subtotal": "={{ $json.invoice.subtotal }}",
+            "Tax": "={{ $json.validation.taxTotal }}",
+            "Total": "={{ $json.invoice.total }}",
+            "Currency": "={{ $json.invoice.currency }}",
+            "Status": "={{ $json.validation.status }}",
+            "File": "={{ $json.meta.fileName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice #",
+              "displayName": "Invoice #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "File",
+              "displayName": "File",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d5f1ebf1-9f39-5fc0-a046-f7c64353e888",
+      "name": "Append to expense ledger",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4c3ae745-2033-5082-a638-33517a84dabf",
+              "leftValue": "={{ $('Validate totals').item.json.validation.status }}",
+              "rightValue": "needs_review",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b5ab3276-15a3-5a9a-a693-3bf6a96fe632",
+      "name": "Needs review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#finance"
+        },
+        "text": "=:warning: *Invoice needs review* — {{ $('Validate totals').item.json.invoice.vendorName || 'Unknown vendor' }} · {{ $('Validate totals').item.json.invoice.total }} {{ $('Validate totals').item.json.invoice.currency }}\n{{ $('Validate totals').item.json.validation.issues.map(i => '• ' + i).join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "644cfb4e-294c-5401-a6d5-d079ea9544e6",
+      "name": "Flag in #finance",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.5 Flash-Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract invoice fields",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New invoice email": {
+      "main": [
+        [
+          {
+            "node": "Read PDF text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read PDF text": {
+      "main": [
+        [
+          {
+            "node": "Email document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email document": {
+      "main": [
+        [
+          {
+            "node": "Normalize document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document webhook": {
+      "main": [
+        [
+          {
+            "node": "Webhook document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook document": {
+      "main": [
+        [
+          {
+            "node": "Normalize document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize document": {
+      "main": [
+        [
+          {
+            "node": "Extract invoice fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract invoice fields": {
+      "main": [
+        [
+          {
+            "node": "Validate totals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate totals": {
+      "main": [
+        [
+          {
+            "node": "Return extraction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run?": {
+      "main": [
+        [
+          {
+            "node": "Append to expense ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to expense ledger": {
+      "main": [
+        [
+          {
+            "node": "Needs review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs review?": {
+      "main": [
+        [
+          {
+            "node": "Flag in #finance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Turns invoices and receipts (email PDFs or pasted text) into structured, validated JSON — vendor, dates, GST/HST/PST/QST, line items and category — then logs them to an expense sheet and flags anything that doesn't add up."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Finance"
+    },
+    {
+      "name": "Document processing"
+    }
+  ]
+}

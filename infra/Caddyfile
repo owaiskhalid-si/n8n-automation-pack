@@ -1,0 +1,23 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$N8N_DOMAIN} {
+	encode zstd gzip
+
+	# Webhooks are public; the editor and REST API can be locked to office/VPN IPs.
+	@editor_blocked {
+		not path /webhook/* /webhook-waiting/* /form/* /healthz
+		not remote_ip {$EDITOR_ALLOWED_IPS}
+	}
+	respond @editor_blocked "Forbidden" 403
+
+	reverse_proxy n8n:5678
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}

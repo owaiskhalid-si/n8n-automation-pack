@@ -1,0 +1,48 @@
+{
+  "invoice": {
+    "documentType": "invoice",
+    "vendorName": "NORTHWIND OFFICE SUPPLY LTD.",
+    "vendorTaxNumber": "123456789 RT0001",
+    "invoiceNumber": "INV-20417",
+    "invoiceDate": "2026-09-14",
+    "dueDate": "2026-10-14",
+    "currency": "CAD",
+    "subtotal": 420,
+    "taxes": [
+      {
+        "type": "HST",
+        "rate": 13,
+        "amount": 54.6
+      }
+    ],
+    "total": 474.6,
+    "lineItems": [
+      {
+        "description": "Ergonomic office chair",
+        "quantity": 2,
+        "unitPrice": 180,
+        "amount": 360
+      },
+      {
+        "description": "Desk lamp",
+        "quantity": 2,
+        "unitPrice": 30,
+        "amount": 60
+      }
+    ],
+    "category": "office",
+    "paymentStatus": "due"
+  },
+  "validation": {
+    "status": "ok",
+    "issues": [],
+    "lineItemsTotal": 420,
+    "taxTotal": 54.6
+  },
+  "meta": {
+    "source": "webhook",
+    "fileName": "pasted-text",
+    "demo": true,
+    "receivedAt": "2026-10-29T15:59:43.188-04:00"
+  }
+}

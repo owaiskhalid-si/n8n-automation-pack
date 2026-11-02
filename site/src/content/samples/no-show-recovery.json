@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "sms": "Hi Priya, we missed you today at Maple Dental! Life happens—no worries at all. Whenever you're ready to reschedule, pick a new time here: https://your-booking-app.example.com/book 😊",
+  "emailSubject": "We missed you today, Priya!",
+  "emailBody": "Hi Priya,\n\nWe missed you at your cleaning today, but we know how busy life gets and things pop up. No worries at all!\n\nWhenever you have a moment, we'd love to get you back on the schedule. Just use the link below to pick a new time that works for you.\n\nhttps://your-booking-app.example.com/book\n\nWarmly,\nMaple Dental"
+}

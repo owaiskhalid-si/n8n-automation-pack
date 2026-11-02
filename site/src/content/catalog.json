@@ -1,0 +1,164 @@
+[
+  {
+    "file": "01-ai-lead-qualifier.json",
+    "slug": "lead-qualifier",
+    "name": "AI Lead Qualifier — score, route & draft a reply",
+    "description": "Scores inbound leads 0–100 against your ideal customer profile with Gemini, logs them to a Google Sheets CRM, alerts sales on Slack for hot leads and drafts a personalised reply.",
+    "tags": [
+      "AI",
+      "Sales",
+      "Lead generation"
+    ],
+    "nodeCount": 11,
+    "webhooks": [
+      "lead-qualifier"
+    ],
+    "integrations": [
+      "webhook",
+      "chainLlm",
+      "lmChatGoogleGemini",
+      "outputParserStructured",
+      "googleSheets",
+      "slack"
+    ]
+  },
+  {
+    "file": "02-invoice-receipt-extractor.json",
+    "slug": "invoice-extractor",
+    "name": "Invoice & Receipt Extractor — AI bookkeeping with validation",
+    "description": "Turns invoices and receipts (email PDFs or pasted text) into structured, validated JSON — vendor, dates, GST/HST/PST/QST, line items and category — then logs them to an expense sheet and flags anything that doesn't add up.",
+    "tags": [
+      "AI",
+      "Finance",
+      "Document processing"
+    ],
+    "nodeCount": 14,
+    "webhooks": [
+      "invoice-extractor"
+    ],
+    "integrations": [
+      "gmailTrigger",
+      "extractFromFile",
+      "webhook",
+      "informationExtractor",
+      "lmChatGoogleGemini",
+      "googleSheets",
+      "slack"
+    ]
+  },
+  {
+    "file": "03-support-inbox-triage.json",
+    "slug": "support-triage",
+    "name": "Support Inbox Triage — classify, prioritise & draft replies",
+    "description": "Reads every new support email, classifies it (billing, bug, access, cancellation, spam…), scores urgency and sentiment, escalates urgent tickets to Slack and leaves a ready-to-send draft reply in the Gmail thread.",
+    "tags": [
+      "AI",
+      "Customer support",
+      "Email"
+    ],
+    "nodeCount": 15,
+    "webhooks": [
+      "support-triage"
+    ],
+    "integrations": [
+      "gmailTrigger",
+      "webhook",
+      "chainLlm",
+      "lmChatGoogleGemini",
+      "outputParserStructured",
+      "gmail",
+      "slack"
+    ]
+  },
+  {
+    "file": "04-content-repurposing-engine.json",
+    "slug": "content-repurposer",
+    "name": "Content Repurposing Engine — one article, every channel",
+    "description": "Give it a blog URL or raw text and get back a LinkedIn post, an X thread, a newsletter blurb, an Instagram caption, hooks and hashtags in your brand voice — optionally queued in a Google Sheets content calendar.",
+    "tags": [
+      "AI",
+      "Marketing",
+      "Content"
+    ],
+    "nodeCount": 15,
+    "webhooks": [
+      "content-repurposer"
+    ],
+    "integrations": [
+      "webhook",
+      "httpRequest",
+      "html",
+      "chainLlm",
+      "lmChatGoogleGemini",
+      "outputParserStructured",
+      "googleSheets"
+    ]
+  },
+  {
+    "file": "05-appointment-reminders-no-show-recovery.json",
+    "slug": "no-show-recovery",
+    "name": "Appointment Reminders & No-show Recovery",
+    "description": "For salons, clinics and service businesses: sends 24-hour and 2-hour SMS/email reminders from your booking system every 15 minutes, and turns no-shows into rebookings with a personalised AI message.",
+    "tags": [
+      "AI",
+      "Booking",
+      "SMS"
+    ],
+    "nodeCount": 16,
+    "webhooks": [
+      "no-show-recovery"
+    ],
+    "integrations": [
+      "scheduleTrigger",
+      "httpRequest",
+      "twilio",
+      "emailSend",
+      "webhook",
+      "chainLlm",
+      "lmChatGoogleGemini",
+      "outputParserStructured"
+    ]
+  },
+  {
+    "file": "06-weekly-kpi-report.json",
+    "slug": "kpi-report",
+    "name": "Weekly KPI Report — numbers + AI executive summary",
+    "description": "Every Monday at 8am: pulls the last 14 days of orders from Postgres, computes week-over-week KPIs, has Gemini write a plain-English executive summary with wins, risks and actions, and emails a clean HTML report and a Slack digest.",
+    "tags": [
+      "AI",
+      "Reporting",
+      "Analytics"
+    ],
+    "nodeCount": 14,
+    "webhooks": [
+      "kpi-report"
+    ],
+    "integrations": [
+      "scheduleTrigger",
+      "postgres",
+      "webhook",
+      "chainLlm",
+      "lmChatGoogleGemini",
+      "outputParserStructured",
+      "emailSend",
+      "slack"
+    ]
+  },
+  {
+    "file": "07-global-error-alerts.json",
+    "slug": null,
+    "name": "Global Error Alerts — Slack + email when any workflow fails",
+    "description": "Set this as the error workflow for every production workflow: failures are posted to Slack and emailed with the workflow, failing node, error message and a direct link to the execution.",
+    "tags": [
+      "Ops",
+      "Monitoring"
+    ],
+    "nodeCount": 4,
+    "webhooks": [],
+    "integrations": [
+      "errorTrigger",
+      "slack",
+      "emailSend"
+    ]
+  }
+]

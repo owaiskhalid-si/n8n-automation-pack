@@ -1,0 +1,573 @@
+{
+  "id": "7dpDJs5V0Eex97as",
+  "name": "AI Lead Qualifier — score, route & draft a reply",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Lead Qualifier\nScores every inbound lead against your **ideal customer profile**, then routes it.\n\n**Flow**\n1. Website form / CRM posts the lead to the webhook\n2. Gemini returns a score, tier, reasons and a reply draft (structured JSON)\n3. The webhook responds instantly with the result\n4. Live runs are logged to Google Sheets; hot leads (70+) ping `#sales` on Slack\n\n**Setup:** add a Google Gemini credential (free API key from Google AI Studio), a Google Sheets credential + sheet, and a Slack credential. Edit the ICP in the system prompt.\n\nSend `\"demo\": true` in the body to skip the Sheets/Slack side effects.",
+        "height": 460,
+        "width": 380,
+        "color": 4
+      },
+      "id": "2f5dae6c-9183-514c-a7fb-d625ccf1c7a3",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-qualifier",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "1e4cb93b-9e97-5caa-a44b-ef1fc5259c27",
+      "name": "Lead form webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        260
+      ],
+      "webhookId": "a4ed4c4f-f278-5160-a197-3289d8d5f3c5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e15b5ad5-51d8-5292-a587-7295e8b5eea5",
+              "name": "name",
+              "value": "={{ ($json.body.name || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "6b459c04-4913-587b-a8ed-0614de2d1481",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "c763aa9d-aab3-5d6a-aba1-a72de50e044e",
+              "name": "company",
+              "value": "={{ $json.body.company || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "4ebbe7f6-ab25-51b2-a68f-cef5a7e3dc69",
+              "name": "website",
+              "value": "={{ $json.body.website || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "3fedd8f3-022a-5094-a087-9b31964b9cde",
+              "name": "role",
+              "value": "={{ $json.body.role || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d3a945a8-e8a1-588d-ad94-954dd32de6eb",
+              "name": "budget",
+              "value": "={{ $json.body.budget || 'Not specified' }}",
+              "type": "string"
+            },
+            {
+              "id": "3da220d8-b38c-58be-a686-9eb8e4d1e57c",
+              "name": "timeline",
+              "value": "={{ $json.body.timeline || 'Not specified' }}",
+              "type": "string"
+            },
+            {
+              "id": "e2d2b4d9-631a-540c-a11e-2b817dc02555",
+              "name": "message",
+              "value": "={{ String($json.body.message || '').slice(0, 4000) }}",
+              "type": "string"
+            },
+            {
+              "id": "53c13d37-e9f1-50fc-a260-a585cf2fa539",
+              "name": "source",
+              "value": "={{ $json.body.source || 'website' }}",
+              "type": "string"
+            },
+            {
+              "id": "17360ebf-46bf-5f12-a711-fd97c8cd9da2",
+              "name": "demo",
+              "value": "={{ $json.body.demo === true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "2d42d4cc-9e3b-5074-a5a6-7e2894e96b55",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "22d26d3e-4d72-5814-a9d0-263413b0cd3a",
+      "name": "Normalize lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Qualify this inbound lead.\n\nName: {{ $json.name }}\nEmail: {{ $json.email }}\nCompany: {{ $json.company }}\nWebsite: {{ $json.website }}\nRole: {{ $json.role }}\nBudget: {{ $json.budget }}\nTimeline: {{ $json.timeline }}\nSource: {{ $json.source }}\nMessage:\n\"\"\"\n{{ $json.message }}\n\"\"\"",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You are a senior sales development rep for a software studio that builds web apps, mobile apps, CRMs, booking systems and AI automations for small and mid-sized businesses in North America.\n\nIdeal customer profile:\n- A business with a clear problem that software or automation can solve\n- Budget of CA$5,000+ for a project, or a monthly retainer\n- Decision maker or strong influencer (founder, owner, director, head of operations)\n- Wants to start within the next 3 months\n\nScore the lead 0–100 against this profile. Be calibrated — most leads are warm, few are hot.\n- hot (70–100): strong fit, clear need, budget and authority\n- warm (40–69): some fit, but budget, authority or timeline is unclear\n- cold (0–39): poor fit, spam, students, job seekers, vague requests\n\nWrite the reply draft in the lead's language: friendly, specific to their message, under 120 words, ending with one clear next step. Never invent facts about the lead."
+            }
+          ]
+        }
+      },
+      "id": "6804f6a7-850e-5b3b-a189-eace724bf1e8",
+      "name": "Qualify lead",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        460,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.2,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "f046e182-14bf-583e-a19b-e8851b5e11d7",
+      "name": "Gemini 3.5 Flash-Lite",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"score\": {\n      \"type\": \"integer\",\n      \"minimum\": 0,\n      \"maximum\": 100\n    },\n    \"tier\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"hot\",\n        \"warm\",\n        \"cold\"\n      ]\n    },\n    \"intent\": {\n      \"type\": \"string\",\n      \"description\": \"One sentence: what the lead wants\"\n    },\n    \"servicesNeeded\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"budgetFit\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"strong\",\n        \"possible\",\n        \"weak\",\n        \"unknown\"\n      ]\n    },\n    \"isDecisionMaker\": {\n      \"type\": \"boolean\"\n    },\n    \"reasons\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"2–4 short reasons for the score\"\n    },\n    \"nextAction\": {\n      \"type\": \"string\"\n    },\n    \"replyDraft\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"score\",\n    \"tier\",\n    \"intent\",\n    \"servicesNeeded\",\n    \"budgetFit\",\n    \"isDecisionMaker\",\n    \"reasons\",\n    \"nextAction\",\n    \"replyDraft\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "f1856e99-ee7b-5965-a09a-2101ac224c46",
+      "name": "Lead score schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        600,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb31a318-1fdb-51ba-a385-c58a71c9e64c",
+              "name": "lead",
+              "value": "={{ $('Normalize lead').item.json }}",
+              "type": "object"
+            },
+            {
+              "id": "a8f38d4b-5261-5537-a10c-e870f8f88bf2",
+              "name": "qualification",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "3ef2243d-00d0-59a1-a853-664a4d6eebfe",
+      "name": "Lead + qualification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        760,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, lead: { name: $json.lead.name, company: $json.lead.company }, ...$json.qualification } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5e41906f-167d-5a66-a10a-d80a5f21dbbc",
+      "name": "Return qualification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1000,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "62a21982-0448-5292-a9c2-19e9797f2d36",
+              "leftValue": "={{ $json.lead.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "ffabf3da-189e-5437-afaf-fa5576e7b58c",
+      "name": "Live run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received": "={{ $json.lead.receivedAt }}",
+            "Name": "={{ $json.lead.name }}",
+            "Email": "={{ $json.lead.email }}",
+            "Company": "={{ $json.lead.company }}",
+            "Score": "={{ $json.qualification.score }}",
+            "Tier": "={{ $json.qualification.tier }}",
+            "Intent": "={{ $json.qualification.intent }}",
+            "Next action": "={{ $json.qualification.nextAction }}",
+            "Source": "={{ $json.lead.source }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tier",
+              "displayName": "Tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Next action",
+              "displayName": "Next action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71854358-d817-5397-a060-156fc1d3af49",
+      "name": "Log to CRM sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1240,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3d5486fe-894b-57fb-a140-14335447b824",
+              "leftValue": "={{ $('Lead + qualification').item.json.qualification.score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "2bf6c8cf-cd20-55c7-adb1-f7776f9488d6",
+      "name": "Hot lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#sales"
+        },
+        "text": "=:fire: *Hot lead* — {{ $('Lead + qualification').item.json.lead.name }} ({{ $('Lead + qualification').item.json.lead.company || 'no company' }}) scored *{{ $('Lead + qualification').item.json.qualification.score }}*\n> {{ $('Lead + qualification').item.json.qualification.intent }}\n*Next step:* {{ $('Lead + qualification').item.json.qualification.nextAction }}\n*Email:* {{ $('Lead + qualification').item.json.lead.email }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "d7b876bb-39e4-57fe-a8a0-f2839d91c19d",
+      "name": "Alert #sales",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1720,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.5 Flash-Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Qualify lead",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead score schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Qualify lead",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead form webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize lead": {
+      "main": [
+        [
+          {
+            "node": "Qualify lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qualify lead": {
+      "main": [
+        [
+          {
+            "node": "Lead + qualification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead + qualification": {
+      "main": [
+        [
+          {
+            "node": "Return qualification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run?": {
+      "main": [
+        [
+          {
+            "node": "Log to CRM sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to CRM sheet": {
+      "main": [
+        [
+          {
+            "node": "Hot lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot lead?": {
+      "main": [
+        [
+          {
+            "node": "Alert #sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Scores inbound leads 0–100 against your ideal customer profile with Gemini, logs them to a Google Sheets CRM, alerts sales on Slack for hot leads and drafts a personalised reply."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Sales"
+    },
+    {
+      "name": "Lead generation"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  N8N_IMAGE: n8nio/n8n:2.40.7
+
+jobs:
+  workflows:
+    name: Build, validate & unit-test workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Generated JSON is up to date
+        run: npm run build && git diff --exit-code -- workflows
+      - name: Extract node schemas from the n8n image we deploy
+        run: |
+          docker run --rm --entrypoint sh "$N8N_IMAGE" -c \
+            'cat $(find /usr/local/lib/node_modules/n8n -path "*nodes-base/dist/types/nodes.json" | head -1)' > base.json
+          docker run --rm --entrypoint sh "$N8N_IMAGE" -c \
+            'cat $(find /usr/local/lib/node_modules/n8n -path "*n8n-nodes-langchain/dist/types/nodes.json" | head -1)' > langchain.json
+          jq -s '(.[0] | map(.name = "n8n-nodes-base." + .name)) + (.[1] | map(.name = "@n8n/n8n-nodes-langchain." + .name))' base.json langchain.json > nodes.json
+      - name: Validate every node and parameter
+        run: N8N_NODES_JSON=nodes.json npm run validate
+      - name: Unit-test Code node JavaScript
+        run: npm test
+
+  e2e:
+    name: End-to-end in real n8n (mock Gemini)
+    needs: workflows
+    runs-on: ubuntu-latest
+    env:
+      N8N_DEV_URL: http://localhost:5690
+      N8N_DEV_EMAIL: ci-owner@example.test
+      N8N_DEV_PASSWORD: Ci-Owner-${{ github.run_id }}a
+      N8N_CONTAINER: n8n-ci
+      MOCK_LLM_URL: http://host.docker.internal:5699
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Start n8n
+        run: |
+          docker run -d --name n8n-ci -p 5690:5678 --add-host=host.docker.internal:host-gateway \
+            -e N8N_SECURE_COOKIE=false -e N8N_DIAGNOSTICS_ENABLED=false "$N8N_IMAGE"
+          for i in $(seq 1 60); do curl -sf "$N8N_DEV_URL/healthz" && break; sleep 2; done
+      - name: Start mock LLM API (Gemini + Anthropic)
+        run: nohup node tools/e2e/mock-llm.mjs > mock.log 2>&1 &
+      - name: Create owner and placeholder credentials
+        run: |
+          curl -sf -X POST "$N8N_DEV_URL/rest/owner/setup" -H 'content-type: application/json' \
+            -d "{\"email\":\"$N8N_DEV_EMAIL\",\"firstName\":\"CI\",\"lastName\":\"Owner\",\"password\":\"$N8N_DEV_PASSWORD\"}" > /dev/null
+          node tools/dev-credentials.mjs
+      - name: Publish workflows and call every webhook
+        run: node tools/e2e/run.mjs
+      - if: failure()
+        run: docker logs n8n-ci | tail -100; cat mock.log
+
+  infra:
+    name: Terraform, Compose, Caddy & shell checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false && terraform -chdir=infra/terraform validate
+      - name: Compose config
+        run: |
+          sed -e 's/^N8N_ENCRYPTION_KEY=$/N8N_ENCRYPTION_KEY=x/' -e 's/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=x/' infra/.env.example > ci.env
+          docker compose -f infra/docker-compose.yml --env-file ci.env config --quiet
+      - name: Caddyfile
+        run: |
+          docker run --rm -e N8N_DOMAIN=n8n.example.com -e ACME_EMAIL=a@example.com -e "EDITOR_ALLOWED_IPS=0.0.0.0/0" \
+            -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: ShellCheck
+        run: shellcheck infra/scripts/*.sh infra/oracle/*.sh
+
+  site:
+    name: Gallery site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: site/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "subject": "Charged twice",
+  "category": "billing",
+  "urgency": "critical",
+  "sentiment": "neutral",
+  "summary": "Customer reports being charged twice for their September subscription.",
+  "customerGoal": "To get the duplicate September charge fixed and refunded.",
+  "language": "en",
+  "needsHuman": true,
+  "tags": [
+    "billing",
+    "duplicate-charge",
+    "payment"
+  ],
+  "suggestedReply": "Hi Marc,\n\nThanks for reaching out, and I am so sorry to hear that you were billed twice for September! I understand how frustrating unexpected charges can be.\n\nI have flagged this for our billing team to investigate and resolve right away. We will look into your account details and follow up with you shortly with the next steps.\n\nBest,\nThe Support Team"
+}

@@ -1,0 +1,6 @@
+domain     = "n8n.example.com"
+acme_email = "you@example.com"
+repo_url   = "https://github.com/owaiskhalid-si/n8n-automation-pack.git"
+
+# Lock the editor to your IP (webhooks stay public):
+# editor_allowed_cidrs = ["203.0.113.10/32"]

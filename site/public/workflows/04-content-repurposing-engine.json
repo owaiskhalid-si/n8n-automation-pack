@@ -1,0 +1,744 @@
+{
+  "id": "2dBmc2mr6UvoqFdM",
+  "name": "Content Repurposing Engine — one article, every channel",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Content Repurposing Engine\n`POST { url | text, tone?, audience?, brand? }`\n\n1. If a URL is given, fetch the page and strip navigation, scripts and footers\n2. **Gemini 3.6 Flash** rewrites it for LinkedIn, X, email and Instagram\n3. The webhook returns all formats as JSON\n4. Live runs are appended to a **content calendar** sheet for review",
+        "height": 320,
+        "width": 400,
+        "color": 4
+      },
+      "id": "7f22aa97-ba22-599a-a0fa-bce73aae7b91",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content-repurposer",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "17a3972b-74c2-5b5f-a3ab-a277481a5be4",
+      "name": "Content webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "63b17f35-c970-5f02-afcd-538e25650754"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f103dd6c-1712-58ff-a3ab-a2a70f028ab8",
+              "name": "url",
+              "value": "={{ String($json.body.url || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "59ed18cc-8e3d-50b7-a630-80a356ecd8e7",
+              "name": "text",
+              "value": "={{ String($json.body.text || '').slice(0, 20000) }}",
+              "type": "string"
+            },
+            {
+              "id": "cad675c7-608e-5795-ae70-2ded4aee35c5",
+              "name": "tone",
+              "value": "={{ $json.body.tone || 'confident, practical, no hype' }}",
+              "type": "string"
+            },
+            {
+              "id": "fff4e7dd-00c7-5c6a-ab53-c38de17c14f1",
+              "name": "audience",
+              "value": "={{ $json.body.audience || 'small business owners' }}",
+              "type": "string"
+            },
+            {
+              "id": "3c009609-f6d0-5ee6-aa3a-d2c69c44d00a",
+              "name": "brand",
+              "value": "={{ $json.body.brand || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b06a7524-3526-5e87-a5f5-0923cd4c6198",
+              "name": "demo",
+              "value": "={{ $json.body.demo === true }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "ae0ecbb1-0c84-5b9d-ae42-23e9c512f0ea",
+      "name": "Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "242e3be3-a5fe-59d7-aed5-b755319648cd",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "9a938f27-4906-553c-a1df-eebe05066662",
+      "name": "Has URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "html"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "79c8d221-5459-5acc-a8e4-f69a17c39995",
+      "name": "Fetch article",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "html",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "title",
+              "returnValue": "text"
+            },
+            {
+              "key": "body",
+              "cssSelector": "article, main, body",
+              "returnValue": "text",
+              "skipSelectors": "nav, header, footer, script, style, aside, form, noscript"
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": true
+        }
+      },
+      "id": "933609b9-7521-51b1-aed9-8159e2730cf7",
+      "name": "Extract readable text",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46b9af68-b572-5406-ac90-b7e3654411cd",
+              "name": "title",
+              "value": "={{ $json.title || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "57c4a051-b73f-5d86-a78a-0b7e3160827f",
+              "name": "content",
+              "value": "={{ String($json.body || '').replace(/\\s+/g, ' ').slice(0, 15000) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "e4d46e6f-7c90-53d7-acb7-480a4990db23",
+      "name": "From article",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "53d6ff92-1fc6-59b4-a9ed-208cc42f41e9",
+              "name": "title",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "46f4ad92-c354-5b08-a059-28dcfd523ea1",
+              "name": "content",
+              "value": "={{ $('Input').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "3aaf4296-df6e-53eb-a196-bc321d3570f9",
+      "name": "From text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a525e75d-2656-5a20-a9ad-62dd19a9984d",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "5e06cce3-6d0b-5f7c-a2a3-e901e75251b9",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "e77cc892-bece-593e-ac31-a3a684fd59bf",
+              "name": "tone",
+              "value": "={{ $('Input').item.json.tone }}",
+              "type": "string"
+            },
+            {
+              "id": "5b65fed4-ca82-54c3-a4ac-6273446aca71",
+              "name": "audience",
+              "value": "={{ $('Input').item.json.audience }}",
+              "type": "string"
+            },
+            {
+              "id": "6a3993a5-05b8-5353-a069-dbbde65d32f3",
+              "name": "brand",
+              "value": "={{ $('Input').item.json.brand }}",
+              "type": "string"
+            },
+            {
+              "id": "c79889be-7e2f-56c4-aa59-e5d529f6f5be",
+              "name": "url",
+              "value": "={{ $('Input').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "fe791e86-9c1c-527d-a4f0-624435f532ff",
+              "name": "demo",
+              "value": "={{ $('Input').item.json.demo }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "4ac18d77-7dea-559b-ae53-e6be0df88a6a",
+      "name": "Source content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Audience: {{ $json.audience }}\nTone: {{ $json.tone }}\n{{ $json.brand ? 'Brand: ' + $json.brand : '' }}\nTitle: {{ $json.title || 'n/a' }}\n\nSource:\n\"\"\"\n{{ $json.content }}\n\"\"\"",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You are a senior content strategist and copywriter. Repurpose the source into native content for each channel.\n\nRules:\n- Keep every claim faithful to the source. Do not invent statistics, quotes or results.\n- LinkedIn: strong first line, short paragraphs, one idea, a soft CTA, 120–220 words, max 3 emojis.\n- X thread: 4–7 posts, each under 270 characters, first post is the hook, number them like 1/.\n- Newsletter blurb: 60–90 words that make people click.\n- Instagram caption: conversational, line breaks, up to 5 relevant hashtags at the end.\n- Hooks: 3 alternative opening lines with different angles (contrarian, story, data)."
+            }
+          ]
+        }
+      },
+      "id": "bf2d3cfb-ac2a-5850-af34-3d91407da6fb",
+      "name": "Repurpose content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1580,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {
+          "temperature": 0.7,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "2ea17500-05bd-51ac-ab13-b17d2b8aba94",
+      "name": "Gemini 3.6 Flash",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"headline\": {\n      \"type\": \"string\"\n    },\n    \"summary\": {\n      \"type\": \"string\",\n      \"description\": \"Two sentences\"\n    },\n    \"linkedinPost\": {\n      \"type\": \"string\"\n    },\n    \"xThread\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"newsletterBlurb\": {\n      \"type\": \"string\"\n    },\n    \"instagramCaption\": {\n      \"type\": \"string\"\n    },\n    \"hooks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"hashtags\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"keyTakeaways\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"headline\",\n    \"summary\",\n    \"linkedinPost\",\n    \"xThread\",\n    \"newsletterBlurb\",\n    \"instagramCaption\",\n    \"hooks\",\n    \"hashtags\",\n    \"keyTakeaways\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "8411df1d-b219-5d52-a07b-6f0d398e25f5",
+      "name": "Channel formats schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1720,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b2b8752-76d4-5c4f-a427-763abb6e059d",
+              "name": "source",
+              "value": "={{ { url: $('Source content').item.json.url, title: $('Source content').item.json.title } }}",
+              "type": "object"
+            },
+            {
+              "id": "d40bc88b-91ab-50f0-aae3-a70139466037",
+              "name": "formats",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "90dbfbbd-6901-5faa-a6c9-1e3c4cc2d749",
+              "name": "demo",
+              "value": "={{ $('Source content').item.json.demo }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "6ba7b769-339c-5001-ae01-9d6287983bae",
+      "name": "Content pack",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1880,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, source: $json.source, ...$json.formats } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "83356f57-b800-57bb-adb0-045ed77af2af",
+      "name": "Return content pack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2120,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "72a8459f-5050-5298-a239-c7f42b41eb50",
+              "leftValue": "={{ $json.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6baed13b-8b58-54b3-aa04-a2b693b1ac4c",
+      "name": "Live run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2120,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Content calendar"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Created": "={{ $now.toISODate() }}",
+            "Headline": "={{ $json.formats.headline }}",
+            "Source": "={{ $json.source.url || 'pasted text' }}",
+            "LinkedIn": "={{ $json.formats.linkedinPost }}",
+            "X thread": "={{ $json.formats.xThread.join('\\n\\n') }}",
+            "Newsletter": "={{ $json.formats.newsletterBlurb }}",
+            "Instagram": "={{ $json.formats.instagramCaption }}",
+            "Status": "Draft"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Headline",
+              "displayName": "Headline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "X thread",
+              "displayName": "X thread",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Newsletter",
+              "displayName": "Newsletter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aeae9336-6a0b-5b29-acc9-abd7c288ce2b",
+      "name": "Add to content calendar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2360,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.6 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Repurpose content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Channel formats schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Repurpose content",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content webhook": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input": {
+      "main": [
+        [
+          {
+            "node": "Has URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has URL?": {
+      "main": [
+        [
+          {
+            "node": "Fetch article",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "From text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch article": {
+      "main": [
+        [
+          {
+            "node": "Extract readable text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract readable text": {
+      "main": [
+        [
+          {
+            "node": "From article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From article": {
+      "main": [
+        [
+          {
+            "node": "Source content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From text": {
+      "main": [
+        [
+          {
+            "node": "Source content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source content": {
+      "main": [
+        [
+          {
+            "node": "Repurpose content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repurpose content": {
+      "main": [
+        [
+          {
+            "node": "Content pack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content pack": {
+      "main": [
+        [
+          {
+            "node": "Return content pack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run?": {
+      "main": [
+        [
+          {
+            "node": "Add to content calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Give it a blog URL or raw text and get back a LinkedIn post, an X thread, a newsletter blurb, an Instagram caption, hooks and hashtags in your brand voice — optionally queued in a Google Sheets content calendar."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Marketing"
+    },
+    {
+      "name": "Content"
+    }
+  ]
+}

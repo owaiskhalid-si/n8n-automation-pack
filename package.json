@@ -1,0 +1,25 @@
+{
+  "name": "n8n-automation-pack",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Seven production-ready n8n workflows (AI lead qualification, invoice extraction, support triage, content repurposing, booking reminders, KPI reports, error alerts) authored as code, validated and end-to-end tested.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "validate": "node tools/validate.mjs workflows",
+    "test": "node tools/test-code-nodes.mjs",
+    "mock:llm": "node tools/e2e/mock-llm.mjs",
+    "e2e": "node --env-file=infra/.env.local-dev tools/e2e/run.mjs",
+    "shots": "node --env-file=infra/.env.local-dev tools/canvas-shots.mjs",
+    "check": "npm run build && npm run validate && npm test",
+    "e2e:live": "node --env-file=infra/.env.local-dev tools/e2e/run.mjs --live",
+    "samples:record": "node --env-file=infra/.env.local-dev tools/e2e/run.mjs --live --record"
+  },
+  "devDependencies": {
+    "luxon": "^3.7.2",
+    "playwright-core": "^1.64.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

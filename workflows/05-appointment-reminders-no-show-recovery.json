@@ -1,0 +1,674 @@
+{
+  "id": "kvHlmOaORMbDhabs",
+  "name": "Appointment Reminders & No-show Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1 · Appointment reminders (every 15 min)\nPulls confirmed appointments for the next 25 hours from your booking API, picks the ones due a **24h** or **2h** reminder, sends SMS (Twilio) or email, then marks them as sent so nobody is messaged twice.\n\n**Booking API contract**\n`GET /appointments?from&to` → `[{ id, customerName, phone, email, service, staffName, startsAt, status, reminder24hSentAt, reminder2hSentAt }]`\n`PATCH /appointments/:id/reminders` → `{ type, sentAt }`\n\nEdit business name, timezone and URLs in **Config**.",
+        "height": 400,
+        "width": 440,
+        "color": 4
+      },
+      "id": "03576a75-e1ed-5ebb-a251-b38308ea044e",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "80e5bf10-b7dd-575c-a0c2-d41e37e0cb0d",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6864ce51-ce9c-57af-ae6a-e6a6f284ad15",
+              "name": "businessName",
+              "value": "Maple Dental",
+              "type": "string"
+            },
+            {
+              "id": "15eaf23f-bd03-5a06-ab6c-aad484a46212",
+              "name": "timezone",
+              "value": "America/Toronto",
+              "type": "string"
+            },
+            {
+              "id": "7f4dbf37-f102-56fd-a1eb-a78031bf0c68",
+              "name": "bookingApiUrl",
+              "value": "https://your-booking-app.example.com/api",
+              "type": "string"
+            },
+            {
+              "id": "0f456151-061d-5834-ae01-4fc972eebb46",
+              "name": "manageUrl",
+              "value": "https://your-booking-app.example.com/manage",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "0c839e08-8338-5f96-ab39-ce6f0ca01b18",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.bookingApiUrl }}/appointments",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $now.plus({ hours: 25 }).toISO() }}"
+            },
+            {
+              "name": "status",
+              "value": "confirmed"
+            }
+          ]
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ee5604f4-a4fa-5a0e-aead-0037d3936a4c",
+      "name": "Fetch upcoming appointments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide which appointments need a 24-hour or 2-hour reminder right now.\nconst config = $('Config').first().json;\nconst now = DateTime.now();\nconst out = [];\n\nfor (const { json: appt } of $input.all()) {\n  if (appt.status && appt.status !== 'confirmed') continue;\n  const startsAt = DateTime.fromISO(appt.startsAt);\n  const hoursUntil = startsAt.diff(now, 'hours').hours;\n  let reminderType = null;\n  if (hoursUntil > 0 && hoursUntil <= 2 && !appt.reminder2hSentAt) reminderType = '2h';\n  else if (hoursUntil > 2 && hoursUntil <= 24 && !appt.reminder24hSentAt) reminderType = '24h';\n  if (!reminderType) continue;\n\n  const when = startsAt.setZone(config.timezone).toFormat(\"cccc, LLL d 'at' h:mm a\");\n  const first = String(appt.customerName || '').split(' ')[0] || 'there';\n  const message = reminderType === '24h'\n    ? `Hi ${first}, a reminder of your ${appt.service} with ${appt.staffName} at ${config.businessName} on ${when}. Need to change it? ${config.manageUrl}/${appt.id}`\n    : `Hi ${first}, see you soon! Your ${appt.service} at ${config.businessName} starts at ${startsAt.setZone(config.timezone).toFormat('h:mm a')}.`;\n\n  out.push({\n    json: {\n      appointmentId: appt.id,\n      reminderType,\n      channel: appt.phone ? 'sms' : 'email',\n      phone: appt.phone,\n      email: appt.email,\n      customerName: appt.customerName,\n      subject: `Reminder: ${appt.service} ${reminderType === '24h' ? 'tomorrow' : 'today'}`,\n      message,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "0523fa31-e237-5a8a-a575-f9c7b0fba249",
+      "name": "Pick reminders due",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "89cc798b-cfa2-5236-a526-2853a1d17f42",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "sms",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SMS"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6292693f-dc22-5fa2-a377-33f753514565",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "0370efca-ecf2-528f-ae04-5c75350acc39",
+      "name": "SMS or email?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "from": "+15555550100",
+        "to": "={{ $json.phone }}",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "9011dac7-fad9-5a38-a65f-b5a1ae28b8eb",
+      "name": "Send SMS reminder",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Maple Dental <appointments@example.com>",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "36c9dde3-292f-52e7-ae64-7ef5f0eff757",
+      "name": "Send email reminder",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config').first().json.bookingApiUrl }}/appointments/{{ $('Pick reminders due').item.json.appointmentId }}/reminders",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { type: $('Pick reminders due').item.json.reminderType, sentAt: $now.toISO() } }}",
+        "options": {}
+      },
+      "id": "eb5a904e-aabc-5ff8-a4c4-2c3ec3215265",
+      "name": "Mark reminder sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2 · No-show recovery\nYour booking system calls this webhook when an appointment is marked **no-show**. Gemini writes a warm, non-judgemental rebooking message (SMS + email versions) and Twilio sends it.\n\n`POST { customerName, service, missedAt, rebookUrl, businessName, phone }`",
+        "height": 260,
+        "width": 440,
+        "color": 5
+      },
+      "id": "0c061c54-98b8-5874-a716-b8fb1b5a49b3",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "no-show-recovery",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "06ab2523-cfda-5534-a9d4-1f27dcb552e7",
+      "name": "No-show webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        540
+      ],
+      "webhookId": "02a138e7-8c16-5749-acf6-b3292e26b50a"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dfc259e8-f0fa-5872-a45d-6c0a4f704bea",
+              "name": "customerName",
+              "value": "={{ $json.body.customerName || 'there' }}",
+              "type": "string"
+            },
+            {
+              "id": "3c4e334a-dc08-53e8-acae-a2a2b4cfe3df",
+              "name": "firstName",
+              "value": "={{ String($json.body.customerName || 'there').split(' ')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "b5840403-5c9a-55ce-ab53-eac05cdde8e4",
+              "name": "service",
+              "value": "={{ $json.body.service || 'appointment' }}",
+              "type": "string"
+            },
+            {
+              "id": "c76f33a4-fb6f-5779-abcf-99a231ed0d22",
+              "name": "missedAt",
+              "value": "={{ $json.body.missedAt || $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "f9534c89-046d-5806-a7fe-4a66d005394f",
+              "name": "businessName",
+              "value": "={{ $json.body.businessName || 'Maple Dental' }}",
+              "type": "string"
+            },
+            {
+              "id": "557e3b80-9a72-5869-a5f8-b00acd8efd6c",
+              "name": "rebookUrl",
+              "value": "={{ $json.body.rebookUrl || 'https://your-booking-app.example.com/book' }}",
+              "type": "string"
+            },
+            {
+              "id": "d43d1c5b-3155-55e5-ab2e-ea00e61ed061",
+              "name": "phone",
+              "value": "={{ $json.body.phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "3a499241-a102-59d8-a883-2119cc7e51ad",
+              "name": "visits",
+              "value": "={{ Number($json.body.previousVisits || 0) }}",
+              "type": "number"
+            },
+            {
+              "id": "2336411c-f491-59fe-a866-6f76f2a34c63",
+              "name": "demo",
+              "value": "={{ $json.body.demo === true }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "35d766e1-f011-5385-a57c-1dae3073e123",
+      "name": "No-show details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer: {{ $json.customerName }} (first name {{ $json.firstName }}, {{ $json.visits }} previous visits)\nMissed: {{ $json.service }} at {{ $json.businessName }}, {{ DateTime.fromISO($json.missedAt).toFormat('cccc LLL d, h:mm a') }}\nRebooking link: {{ $json.rebookUrl }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You write short, human messages for a local service business after a customer misses an appointment.\nTone: warm, zero guilt, assume life got in the way. Make rebooking effortless.\n- sms: under 300 characters, first name, one link, no emojis beyond one\n- emailSubject: under 60 characters\n- emailBody: 3 short paragraphs, sign off with the business name\nLoyal customers (3+ previous visits) get a slightly more personal note."
+            }
+          ]
+        }
+      },
+      "id": "04beead6-beca-561b-aeb6-5693a195bb26",
+      "name": "Write rebooking message",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        460,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.6,
+          "maxOutputTokens": 8192
+        }
+      },
+      "id": "d1e7c9a1-e0f4-5054-a73a-75cd02a48c65",
+      "name": "Gemini 3.5 Flash-Lite",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"sms\": {\n      \"type\": \"string\"\n    },\n    \"emailSubject\": {\n      \"type\": \"string\"\n    },\n    \"emailBody\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"sms\",\n    \"emailSubject\",\n    \"emailBody\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "f25bc136-641e-5008-a2a6-0772eb88ee42",
+      "name": "Message schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        600,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, ...$json.output } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "74698877-e0cd-5f53-a3b7-db1e2398173f",
+      "name": "Return message",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5d0c9f10-6a3b-4bd1-8f21-2f7d1c0e9a01",
+              "leftValue": "={{ $('No-show details').item.json.demo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5d0c9f10-6a3b-4bd1-8f21-2f7d1c0e9a02",
+              "leftValue": "={{ $('No-show details').item.json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "3e7cb1b0-e1b8-58e7-a4b7-f2f506591a39",
+      "name": "Live run and has phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        760,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "from": "+15555550100",
+        "to": "={{ $('No-show details').item.json.phone }}",
+        "message": "={{ $json.output.sms }}",
+        "options": {}
+      },
+      "id": "665a1915-05d8-52c0-a479-335b8ca02df4",
+      "name": "Text the customer",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        620
+      ]
+    }
+  ],
+  "connections": {
+    "Gemini 3.5 Flash-Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write rebooking message",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write rebooking message",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch upcoming appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch upcoming appointments": {
+      "main": [
+        [
+          {
+            "node": "Pick reminders due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick reminders due": {
+      "main": [
+        [
+          {
+            "node": "SMS or email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS or email?": {
+      "main": [
+        [
+          {
+            "node": "Send SMS reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send email reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SMS reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark reminder sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark reminder sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No-show webhook": {
+      "main": [
+        [
+          {
+            "node": "No-show details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No-show details": {
+      "main": [
+        [
+          {
+            "node": "Write rebooking message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write rebooking message": {
+      "main": [
+        [
+          {
+            "node": "Return message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live run and has phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live run and has phone?": {
+      "main": [
+        [
+          {
+            "node": "Text the customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "For salons, clinics and service businesses: sends 24-hour and 2-hour SMS/email reminders from your booking system every 15 minutes, and turns no-shows into rebookings with a personalised AI message."
+  },
+  "tags": [
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Booking"
+    },
+    {
+      "name": "SMS"
+    }
+  ]
+}

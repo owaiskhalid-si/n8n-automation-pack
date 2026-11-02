@@ -1,0 +1,174 @@
+{
+  "id": "tRow3Ai6fhXl8gGb",
+  "name": "Global Error Alerts — Slack + email when any workflow fails",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Global error alerts\nIn each production workflow: **Settings → Error workflow → Global Error Alerts**.\n\nEvery failure is posted to `#alerts` and emailed with a link straight to the failed execution.",
+        "height": 220,
+        "width": 380,
+        "color": 3
+      },
+      "id": "8a816c2e-53bb-5789-a80d-8afca9694419",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -20
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8325611e-2c05-5e3b-a235-6152cb5c999d",
+      "name": "On workflow error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa302035-4e39-5108-afc7-6d6eccfe238b",
+              "name": "workflow",
+              "value": "={{ $json.workflow.name }}",
+              "type": "string"
+            },
+            {
+              "id": "fef89e08-0c88-564e-a777-a64d5ddfad25",
+              "name": "node",
+              "value": "={{ $json.execution.lastNodeExecuted || 'unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "fa112f00-3855-5ff3-ab09-05988713e3f4",
+              "name": "message",
+              "value": "={{ String($json.execution.error?.message || 'Unknown error').slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "9b1ba7df-e26f-5a8b-a097-3637e57fdfd7",
+              "name": "url",
+              "value": "={{ $json.execution.url || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "37eac3ac-7499-5fd1-aa28-4ffd3de5a7f6",
+              "name": "mode",
+              "value": "={{ $json.execution.mode }}",
+              "type": "string"
+            },
+            {
+              "id": "f8746fda-1934-54dc-ae8a-c0b345fb32e7",
+              "name": "at",
+              "value": "={{ $now.setZone('America/Toronto').toFormat('LLL d, HH:mm ZZZZ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "30121419-34d9-5de1-a9d4-ebe8d8fc032a",
+      "name": "Format alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#alerts"
+        },
+        "text": "=:red_circle: *{{ $json.workflow }}* failed at *{{ $json.node }}* ({{ $json.at }})\n```{{ $json.message }}```\n{{ $json.url ? '<' + $json.url + '|Open execution>' : '' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "d18da46f-8137-529f-abb3-2f46848b2a3b",
+      "name": "Post to #alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        440,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n <alerts@example.com>",
+        "toEmail": "oncall@example.com",
+        "subject": "=[n8n] {{ $json.workflow }} failed",
+        "emailFormat": "text",
+        "text": "=Workflow: {{ $json.workflow }}\nNode: {{ $json.node }}\nWhen: {{ $json.at }}\nMode: {{ $json.mode }}\n\n{{ $json.message }}\n\n{{ $json.url }}",
+        "options": {}
+      },
+      "id": "4ef357c9-96ed-555c-a1d0-011252da2444",
+      "name": "Email on-call",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Format alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format alert": {
+      "main": [
+        [
+          {
+            "node": "Post to #alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email on-call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Set this as the error workflow for every production workflow: failures are posted to Slack and emailed with the workflow, failing node, error message and a direct link to the execution."
+  },
+  "tags": [
+    {
+      "name": "Ops"
+    },
+    {
+      "name": "Monitoring"
+    }
+  ]
+}
