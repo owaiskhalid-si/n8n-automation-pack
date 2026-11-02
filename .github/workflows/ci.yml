@@ -56,7 +56,8 @@ jobs:
         run: |
           docker run -d --name n8n-ci -p 5690:5678 --add-host=host.docker.internal:host-gateway \
             -e N8N_SECURE_COOKIE=false -e N8N_DIAGNOSTICS_ENABLED=false "$N8N_IMAGE"
-          for i in $(seq 1 60); do curl -sf "$N8N_DEV_URL/healthz" && break; sleep 2; done
+          # /healthz is green before the REST API is up ("n8n is starting up"), so wait for real JSON.
+          for i in $(seq 1 90); do curl -sf "$N8N_DEV_URL/rest/settings" | grep -q '"data"' && break; sleep 2; done
       - name: Start mock LLM API (Gemini + Anthropic)
         run: nohup node tools/e2e/mock-llm.mjs > mock.log 2>&1 &
       - name: Create owner and placeholder credentials
