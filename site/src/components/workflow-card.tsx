@@ -46,47 +46,52 @@ export function CanvasImage({
   );
 }
 
-export function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-md border border-line bg-bg-2 px-2 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-ink-2">{children}</span>;
+/** Small pill. White on a tile; `onCanvas` uses the tile grey on the white page. */
+export function Chip({ children, onCanvas }: { children: React.ReactNode; onCanvas?: boolean }) {
+  return (
+    <span className={`inline-flex h-8 items-center rounded-full px-3 text-xs font-medium whitespace-nowrap ${onCanvas ? "bg-surface" : "bg-raised"}`}>{children}</span>
+  );
 }
 
-export function WorkflowCard({ w }: { w: Workflow }) {
+/** `wide` fills a row on its own (the odd card out): canvas left, text right. */
+export function WorkflowCard({ w, wide }: { w: Workflow; wide?: boolean }) {
   return (
     <Link
       href={`/workflows/${w.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-line-2 hover:shadow-[0_30px_60px_-40px_rgb(0_0_0/0.6)]"
+      className={`group flex min-w-0 flex-col rounded-tile bg-surface p-3 pb-6 transition-colors hover:bg-ink/[0.09] ${
+        wide ? "md:col-span-2 md:grid md:grid-cols-[1.1fr_1fr] md:items-center md:gap-4 md:pb-3 xl:col-span-3" : ""
+      }`}
     >
-      <div className="relative overflow-hidden border-b border-line">
+      <div className="relative overflow-hidden rounded-[1.9rem] bg-raised">
         <CanvasImage
           slug={w.slug}
           variant="card"
           alt={`${w.title} workflow canvas`}
           className="aspect-[1.6] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-surface to-transparent" />
         {w.demo && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[0.625rem] tracking-wide text-ink uppercase backdrop-blur">
-            <span className="size-1.5 rounded-full bg-good" /> Live demo
+          <span className="absolute top-3 left-3 inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-medium text-[#111]">
+            <span className="live-dot size-1.5 rounded-full bg-signal" /> Live demo
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-5">
+      <div className={`flex flex-1 flex-col px-3 pt-5 sm:px-4 ${wide ? "md:py-4 md:pr-6" : ""}`}>
         <p className="label">
           {w.index} · {w.category}
         </p>
-        <h3 className="mt-2 text-xl font-semibold tracking-tight">{w.title}</h3>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-2">{w.tagline}</p>
+        <h3 className="mt-1.5 text-2xl leading-tight font-semibold">{w.title}</h3>
+        <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-3">{w.tagline}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {w.integrations.slice(0, 4).map((i) => (
             <Chip key={i}>{i}</Chip>
           ))}
         </div>
-        <div className="mt-5 flex items-center justify-between border-t border-line pt-4 text-sm">
-          <span className="font-mono text-xs text-ink-3">{w.nodes} nodes</span>
-          <span className="inline-flex items-center gap-1.5 font-medium text-ink">
+        <div className="mt-5 flex items-center justify-between gap-3 text-sm">
+          <span className="text-ink-3 tabular">{w.nodes} nodes</span>
+          <span className="inline-flex h-10 items-center gap-1.5 rounded-full bg-raised px-4 font-medium transition-colors group-hover:bg-ink group-hover:text-bg">
             {w.demo ? (
               <>
-                <PlayIcon className="size-3.5 text-amber" aria-hidden /> Try it live
+                <PlayIcon className="size-3.5" aria-hidden /> Try it live
               </>
             ) : (
               <>

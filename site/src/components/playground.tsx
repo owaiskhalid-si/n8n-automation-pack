@@ -54,16 +54,14 @@ export function Playground({ w }: { w: Workflow }) {
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-        <div>
-          <p className="label">Try it live</p>
-          <p className="mt-1 text-sm text-ink-2">Edit the input or pick an example, then run the workflow.</p>
-        </div>
+    <div className="rounded-tile bg-inverse px-4 pt-7 pb-4 text-inverse-foreground sm:px-5">
+      <div className="px-2 sm:px-3">
+        <h2 className="text-2xl font-semibold">Try it live</h2>
+        <p className="mt-1.5 text-sm text-inverse-muted">Edit the input or pick an example, then run the workflow.</p>
       </div>
 
-      <form onSubmit={run} className="space-y-4 p-5">
-        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Examples">
+      <form onSubmit={run} className="mt-6 space-y-5 px-2 sm:px-3">
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Examples">
           {demo.presets.map((p, i) => (
             <button
               key={p.label}
@@ -74,8 +72,8 @@ export function Playground({ w }: { w: Workflow }) {
                 setPreset(i);
                 setValues(p.values);
               }}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                preset === i ? "border-amber-fill bg-amber-fill/10 text-ink" : "border-line text-ink-2 hover:border-line-2 hover:text-ink"
+              className={`inline-flex h-9 items-center rounded-full px-4 text-xs font-medium transition-colors active:scale-[0.98] ${
+                preset === i ? "bg-inverse-foreground text-inverse" : "bg-inverse-surface text-inverse-foreground/80 hover:text-inverse-foreground"
               }`}
             >
               {p.label}
@@ -83,7 +81,7 @@ export function Playground({ w }: { w: Workflow }) {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {demo.fields.map((f) => {
             const common = {
               id: `f-${f.name}`,
@@ -97,18 +95,23 @@ export function Playground({ w }: { w: Workflow }) {
                 setValues((v) => ({ ...v, [f.name]: e.target.value }));
               },
               className:
-                "w-full rounded-xl border border-line bg-bg-2 px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-amber-fill",
+                "w-full bg-inverse-surface text-[0.9375rem] text-inverse-foreground outline-none transition-shadow placeholder:text-inverse-muted focus-visible:ring-2 focus-visible:ring-signal",
             };
             return (
-              <label key={f.name} htmlFor={common.id} className={`flex flex-col gap-1.5 ${f.half ? "col-span-2 sm:col-span-1" : "col-span-2"}`}>
-                <span className="text-xs font-medium text-ink-2">
+              <label key={f.name} htmlFor={common.id} className={`flex flex-col gap-2 ${f.half ? "col-span-2 sm:col-span-1" : "col-span-2"}`}>
+                <span className="px-1 text-sm font-medium">
                   {f.label}
-                  {f.required && <span className="text-amber"> *</span>}
+                  {f.required && <span className="text-inverse-muted"> *</span>}
                 </span>
                 {f.type === "textarea" ? (
-                  <textarea {...common} rows={f.rows ?? 4} className={`${common.className} resize-y font-mono text-[0.8125rem] leading-relaxed`} />
+                  <textarea {...common} rows={f.rows ?? 4} className={`${common.className} resize-y rounded-3xl px-5 py-4 font-mono text-[0.8125rem] leading-relaxed`} />
                 ) : (
-                  <input {...common} type={f.type === "number" ? "number" : f.type} min={f.type === "number" ? 0 : undefined} />
+                  <input
+                    {...common}
+                    type={f.type === "number" ? "number" : f.type}
+                    min={f.type === "number" ? 0 : undefined}
+                    className={`${common.className} h-12 rounded-full px-5`}
+                  />
                 )}
               </label>
             );
@@ -116,13 +119,13 @@ export function Playground({ w }: { w: Workflow }) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <p className="flex items-center gap-1.5 text-xs text-ink-3">
-            <ShieldCheckIcon className="size-3.5 text-good" aria-hidden /> Demo mode: nothing is emailed, posted or saved.
+          <p className="flex items-center gap-2 px-1 text-xs text-inverse-muted">
+            <ShieldCheckIcon className="size-4" aria-hidden /> Demo mode: nothing is emailed, posted or saved.
           </p>
           <button
             type="submit"
             disabled={status === "running"}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-amber-fill px-4 text-sm font-semibold text-amber-ink transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-70"
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-inverse-foreground px-6 text-sm font-medium text-inverse transition-colors hover:bg-inverse-foreground/85 active:scale-[0.98] disabled:opacity-70"
           >
             {status === "running" ? (
               <>
@@ -138,46 +141,53 @@ export function Playground({ w }: { w: Workflow }) {
       </form>
 
       <div ref={resultRef} aria-live="polite">
-        {status === "error" && error && <p className="mx-5 mb-5 rounded-xl border border-bad/30 bg-bad/10 px-4 py-3 text-sm text-bad">{error}</p>}
+        {status === "error" && error && (
+          <p className="mx-2 mt-5 flex items-start gap-2.5 rounded-[1.25rem] bg-inverse-surface px-4 py-3 text-sm sm:mx-3">
+            <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-signal" aria-hidden /> {error}
+          </p>
+        )}
 
         {result && status !== "running" && (
-          <div className="border-t border-line">
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-2 px-5 py-3">
-              <div className="flex items-center gap-2 font-mono text-xs">
+          <div className="mt-5 rounded-[1.9rem] bg-bg text-ink">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">
+              <div className="flex items-center gap-2 text-xs">
                 {result.mode === "live" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-good/10 px-2 py-0.5 text-good">
-                    <span className="size-1.5 rounded-full bg-good" /> LIVE
+                  <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 font-medium">
+                    <span className="live-dot size-1.5 rounded-full bg-signal" /> Live run
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-fill/10 px-2 py-0.5 text-amber">
-                    <span className="size-1.5 rounded-full bg-amber-fill" /> RECORDED SAMPLE
+                  <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 font-medium">
+                    <span className="size-1.5 rounded-full bg-ink/35" /> Recorded sample
                   </span>
                 )}
-                <span className="text-ink-3">200 · {(result.ms / 1000).toFixed(2)}s</span>
+                <span className="text-ink-3 tabular">200 · {(result.ms / 1000).toFixed(2)}s</span>
               </div>
-              <div className="flex gap-1 rounded-lg border border-line bg-surface p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setView("result")}
-                  className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium ${view === "result" ? "bg-raised text-ink" : "text-ink-3"}`}
-                >
-                  <LayoutPanelTopIcon className="size-3.5" aria-hidden /> Result
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("json")}
-                  className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium ${view === "json" ? "bg-raised text-ink" : "text-ink-3"}`}
-                >
-                  <BracesIcon className="size-3.5" aria-hidden /> JSON
-                </button>
+              <div className="flex h-10 gap-1 rounded-full bg-surface p-1" role="radiogroup" aria-label="Result view">
+                {(
+                  [
+                    ["result", "Result", LayoutPanelTopIcon],
+                    ["json", "JSON", BracesIcon],
+                  ] as const
+                ).map(([v, label, Icon]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={view === v}
+                    onClick={() => setView(v)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-colors ${view === v ? "bg-ink text-bg" : "text-ink-3 hover:text-ink"}`}
+                  >
+                    <Icon className="size-3.5" aria-hidden /> {label}
+                  </button>
+                ))}
               </div>
             </div>
-            {result.note && <p className="border-b border-line px-5 py-2.5 text-xs text-ink-3">{result.note}</p>}
+            {result.note && <p className="px-5 pt-3 text-xs text-ink-3">{result.note}</p>}
             <div className="p-5">
               {view === "result" ? (
                 <ResultView slug={w.slug} data={result.data} />
               ) : (
-                <pre className="max-h-[520px] overflow-auto rounded-xl border border-line bg-bg-2 p-4 font-mono text-[0.75rem] leading-relaxed text-ink-2">
+                <pre className="max-h-[520px] overflow-auto rounded-[1.25rem] bg-bg-2 p-4 font-mono text-[0.75rem] leading-relaxed text-ink-2">
                   {JSON.stringify(result.data, (k, v) => (k === "html" ? `<${String(v).length} chars of HTML>` : v), 2)}
                 </pre>
               )}

@@ -13,11 +13,11 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="grid size-9 place-items-center rounded-lg text-ink-2 transition-colors hover:bg-raised hover:text-ink"
+      className="grid size-11 place-items-center rounded-full bg-surface text-ink transition-colors hover:bg-ink/10 active:scale-[0.98]"
       aria-label="Toggle colour theme"
     >
-      <SunIcon className="hidden size-4 dark:block" />
-      <MoonIcon className="size-4 dark:hidden" />
+      <SunIcon className="hidden size-[18px] dark:block" strokeWidth={1.75} />
+      <MoonIcon className="size-[18px] dark:hidden" strokeWidth={1.75} />
     </button>
   );
 }

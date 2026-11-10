@@ -11,9 +11,9 @@ const money = (n: unknown, currency = "CAD") =>
 
 function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="border-t border-line pt-4 first:border-t-0 first:pt-0">
+    <section className="border-t border-line pt-5 first:border-t-0 first:pt-0">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="label">{title}</h4>
+        <h4 className="text-base font-semibold">{title}</h4>
         {action}
       </div>
       {children}
@@ -31,7 +31,7 @@ function CopyButton({ text }: { text: string }) {
         setDone(true);
         setTimeout(() => setDone(false), 1500);
       }}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-ink-3 transition-colors hover:bg-raised hover:text-ink"
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-bg-2 px-3 text-xs font-medium transition-colors hover:bg-ink hover:text-bg"
     >
       {done ? <CheckIcon className="size-3.5 text-good" /> : <CopyIcon className="size-3.5" />} {done ? "Copied" : "Copy"}
     </button>
@@ -39,18 +39,18 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function Pill({ tone = "neutral", children }: { tone?: "good" | "bad" | "warn" | "neutral" | "info"; children: React.ReactNode }) {
-  const cls = {
-    good: "border-good/30 bg-good/10 text-good",
-    bad: "border-bad/30 bg-bad/10 text-bad",
-    warn: "border-amber-fill/40 bg-amber-fill/10 text-amber",
-    info: "border-info/30 bg-info/10 text-info",
-    neutral: "border-line bg-bg-2 text-ink-2",
-  }[tone];
-  return <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}>{children}</span>;
+  // Monochrome status: ink dot = fine, faint dot = careful, cobalt dot = look here.
+  const dot = { good: "bg-ink", bad: "live-dot bg-signal", warn: "bg-ink/35", info: null, neutral: null }[tone];
+  return (
+    <span className={`inline-flex h-8 items-center gap-1.5 rounded-full bg-bg-2 px-3 text-xs font-medium capitalize ${tone === "bad" ? "text-signal-text" : ""}`}>
+      {dot && <span className={`size-1.5 rounded-full ${dot}`} aria-hidden />}
+      {children}
+    </span>
+  );
 }
 
 function Prose({ text }: { text?: string }) {
-  return <p className="rounded-xl border border-line bg-bg-2 p-3.5 text-sm leading-relaxed whitespace-pre-line text-ink">{text || "—"}</p>;
+  return <p className="rounded-[1.25rem] bg-bg-2 p-4 text-sm leading-relaxed whitespace-pre-line text-ink">{text || "—"}</p>;
 }
 
 function List({ items, icon }: { items?: string[]; icon?: React.ReactNode }) {
@@ -76,8 +76,8 @@ function LeadResult({ d }: { d: Data }) {
     <div className="space-y-4">
       <div className="flex items-center gap-5">
         <svg viewBox="0 0 84 84" className="size-24 shrink-0 -rotate-90" role="img" aria-label={`Score ${score} out of 100`}>
-          <circle cx="42" cy="42" r={r} fill="none" stroke="var(--line)" strokeWidth="7" />
-          <circle cx="42" cy="42" r={r} fill="none" stroke="var(--amber-fill)" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(score / 100) * c} ${c}`} />
+          <circle cx="42" cy="42" r={r} fill="none" stroke="var(--bg-2)" strokeWidth="7" />
+          <circle cx="42" cy="42" r={r} fill="none" stroke="var(--signal)" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(score / 100) * c} ${c}`} />
           <text x="42" y="42" dy="0.35em" textAnchor="middle" className="rotate-90 fill-ink text-[22px] font-semibold" style={{ transformOrigin: "42px 42px" }}>
             {score}
           </text>
@@ -139,11 +139,11 @@ function InvoiceResult({ d }: { d: Data }) {
           </Pill>
         )}
       </div>
-      <div className="overflow-hidden rounded-xl border border-line">
+      <div className="overflow-hidden rounded-[1.25rem] bg-bg-2">
         <table className="w-full text-sm">
-          <thead className="bg-bg-2 text-left text-xs text-ink-3">
+          <thead className="text-left text-xs text-ink-3">
             <tr>
-              <th className="px-3 py-2 font-medium">Item</th>
+              <th className="px-4 pt-3 pb-2 font-medium">Item</th>
               <th className="px-3 py-2 text-right font-medium">Qty</th>
               <th className="px-3 py-2 text-right font-medium">Amount</th>
             </tr>
@@ -258,7 +258,7 @@ function ContentResult({ d }: { d: Data }) {
         <p className="text-lg font-semibold">{d.headline}</p>
         <p className="mt-1 text-sm text-ink-2">{d.summary}</p>
       </div>
-      <div role="tablist" className="flex flex-wrap gap-1 rounded-xl border border-line bg-bg-2 p-1">
+      <div role="tablist" className="scrollbar-none flex max-w-full gap-1 overflow-x-auto rounded-full bg-bg-2 p-1">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -266,7 +266,7 @@ function ContentResult({ d }: { d: Data }) {
             aria-selected={tab === t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${tab === t.id ? "bg-raised text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`}
+            className={`h-9 shrink-0 rounded-full px-4 text-xs font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-ink text-bg" : "text-ink-3 hover:text-ink"}`}
           >
             {t.label}
           </button>
@@ -284,17 +284,17 @@ function ContentResult({ d }: { d: Data }) {
 function NoShowResult({ d }: { d: Data }) {
   return (
     <div className="grid gap-5 sm:grid-cols-[220px_1fr]">
-      <div className="mx-auto w-[220px] rounded-[28px] border border-line-2 bg-bg-2 p-3 shadow-inner">
+      <div className="mx-auto w-[220px] rounded-[32px] bg-bg-2 p-3">
         <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-line-2" />
-        <p className="mb-2 text-center font-mono text-[0.625rem] text-ink-3">SMS · now</p>
-        <div className="rounded-2xl rounded-bl-md bg-raised px-3 py-2 text-[0.8125rem] leading-snug text-ink shadow-sm">{d.sms}</div>
-        <p className="mt-2 text-right font-mono text-[0.625rem] text-ink-3">{String(d.sms ?? "").length} chars</p>
+        <p className="mb-2 text-center text-[0.6875rem] font-medium text-ink-3">SMS · now</p>
+        <div className="rounded-[22px] rounded-bl-lg bg-raised px-3.5 py-2.5 text-[0.8125rem] leading-snug text-ink">{d.sms}</div>
+        <p className="mt-2 text-right text-[0.6875rem] text-ink-3 tabular">{String(d.sms ?? "").length} chars</p>
       </div>
       <div className="space-y-3">
         <Section title="Email" action={<CopyButton text={`${d.emailSubject}\n\n${d.emailBody}`} />}>
-          <div className="rounded-xl border border-line bg-bg-2">
-            <p className="border-b border-line px-3.5 py-2 text-sm font-medium">{d.emailSubject}</p>
-            <p className="px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line text-ink-2">{d.emailBody}</p>
+          <div className="rounded-[1.25rem] bg-bg-2">
+            <p className="border-b border-line px-4 py-3 text-sm font-semibold">{d.emailSubject}</p>
+            <p className="px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-ink-2">{d.emailBody}</p>
           </div>
         </Section>
       </div>
@@ -314,13 +314,13 @@ function KpiResult({ d }: { d: Data }) {
         <p className="font-mono text-xs text-ink-3">
           {d.business} · {d.period?.from} → {d.period?.to}
         </p>
-        <div className="flex gap-1 rounded-lg border border-line bg-bg-2 p-0.5">
+        <div className="flex h-10 gap-1 rounded-full bg-bg-2 p-1">
           {(["summary", "email"] as const).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize ${view === v ? "bg-raised text-ink" : "text-ink-3"}`}
+              className={`rounded-full px-3.5 text-xs font-medium capitalize transition-colors ${view === v ? "bg-ink text-bg" : "text-ink-3 hover:text-ink"}`}
             >
               {v === "email" ? "Email preview" : "Summary"}
             </button>
@@ -328,19 +328,19 @@ function KpiResult({ d }: { d: Data }) {
         </div>
       </div>
       {view === "email" ? (
-        <iframe title="HTML email report" srcDoc={d.html} sandbox="" className="h-[520px] w-full rounded-xl border border-line bg-white" />
+        <iframe title="HTML email report" srcDoc={d.html} sandbox="" className="h-[520px] w-full rounded-[1.25rem] bg-white" />
       ) : (
         <>
           <p className="text-lg leading-snug font-semibold">{s.headline}</p>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {(d.kpis ?? []).map((k: Data) => {
               const up = (k.changePct ?? 0) >= 0;
               const good = up === k.goodWhenUp;
               const Icon = up ? ArrowUpRightIcon : ArrowDownRightIcon;
               return (
-                <div key={k.label} className="bg-surface px-3.5 py-3">
+                <div key={k.label} className="min-w-0 rounded-[1.25rem] bg-bg-2 px-4 py-3">
                   <p className="truncate text-xs text-ink-3">{k.label}</p>
-                  <p className="mt-1 text-lg font-semibold tracking-tight">{fmtValue(k)}</p>
+                  <p className="mt-1 text-xl font-semibold tracking-tight tabular">{fmtValue(k)}</p>
                   {k.changePct !== null && (
                     <p className={`mt-0.5 inline-flex items-center gap-0.5 text-xs ${good ? "text-good" : "text-bad"}`}>
                       <Icon className="size-3.5" aria-hidden />
@@ -352,7 +352,7 @@ function KpiResult({ d }: { d: Data }) {
             })}
           </div>
           <p className="text-sm leading-relaxed text-ink-2">{s.summary}</p>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 border-t border-line pt-5 sm:grid-cols-3 [&>section]:border-t-0 [&>section]:pt-0">
             <Section title="Wins">
               <List items={s.wins} icon={<ArrowUpRightIcon className="size-3.5 text-good" />} />
             </Section>

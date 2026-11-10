@@ -26,114 +26,120 @@ export default async function WorkflowPage({ params }: PageProps<"/workflows/[sl
 
   return (
     <>
-      <section className="relative overflow-hidden border-b border-line">
-        <div className="bg-dots absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
-        <div className="relative mx-auto max-w-[1280px] px-4 pt-10 pb-10 sm:px-6">
-          <Link href="/#workflows" className="inline-flex items-center gap-1.5 text-sm text-ink-3 transition-colors hover:text-ink">
-            <ArrowLeftIcon className="size-4" aria-hidden /> All workflows
-          </Link>
-          <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-            <div className="max-w-3xl animate-rise">
-              <p className="label">
-                {w.index} · {w.category} · {w.nodes} nodes
-              </p>
-              <h1 className="mt-3 text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.03em] sm:text-[3.2rem]">{w.title}</h1>
-              <p className="mt-4 max-w-2xl text-[1.0625rem] leading-relaxed text-ink-2">{w.description}</p>
-              <div className="mt-5 flex flex-wrap gap-1.5">
-                {w.integrations.map((x) => (
-                  <Chip key={x}>{x}</Chip>
-                ))}
-              </div>
+      <section className="pt-4 pb-7 lg:pt-6">
+        <Link
+          href="/#workflows"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface pr-4 pl-3 text-sm font-medium transition-colors hover:bg-ink/10"
+        >
+          <ArrowLeftIcon className="size-4" aria-hidden /> All workflows
+        </Link>
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-3xl animate-rise">
+            <p className="text-sm font-medium text-ink-3">
+              {w.index} · {w.category} · {w.nodes} nodes
+            </p>
+            <h1 className="mt-2 font-display text-[2.25rem] leading-[1.05] sm:text-[3rem]">{w.title}</h1>
+            <p className="mt-3 max-w-2xl text-lg text-ink-3">{w.description}</p>
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {w.integrations.map((x) => (
+                <Chip key={x} onCanvas>
+                  {x}
+                </Chip>
+              ))}
             </div>
-            <div className="flex flex-wrap gap-2">
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`/workflows/${w.file}`}
+              download
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-bg transition-colors hover:bg-ink/85 active:scale-[0.98]"
+            >
+              <DownloadIcon className="size-4" aria-hidden /> Download JSON
+            </a>
+            {site.repoUrl && (
               <a
-                href={`/workflows/${w.file}`}
-                download
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-line-2 bg-surface px-4 text-sm font-medium transition-colors hover:border-ink-3"
+                href={`${site.repoUrl}/blob/main/tools/workflows`}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-surface px-5 text-sm font-medium transition-colors hover:bg-ink/10 active:scale-[0.98]"
               >
-                <DownloadIcon className="size-4" aria-hidden /> Download JSON
+                <GithubIcon className="size-4" /> Source
               </a>
-              {site.repoUrl && (
-                <a
-                  href={`${site.repoUrl}/blob/main/tools/workflows`}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-line-2 bg-surface px-4 text-sm font-medium transition-colors hover:border-ink-3"
-                >
-                  <GithubIcon className="size-4" /> Source
-                </a>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1280px] px-4 pt-8 sm:px-6">
-        <figure className="overflow-hidden rounded-2xl border border-line bg-surface">
+      <figure className="rounded-tile bg-surface p-3">
+        <div className="overflow-hidden rounded-[1.9rem] bg-raised">
           <CanvasImage slug={w.slug} alt={`${w.title} in the n8n editor`} priority />
-          <figcaption className="flex items-center justify-between border-t border-line px-4 py-2.5 font-mono text-[0.6875rem] text-ink-3">
-            <span>n8n 2.40 editor · {w.file}</span>
-            <span>imports with one click</span>
-          </figcaption>
-        </figure>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
-          <div className="min-w-0">
-            {w.demo ? (
-              <Playground w={w} />
-            ) : (
-              <div className="rounded-2xl border border-line bg-surface p-6">
-                <p className="label">No live demo</p>
-                <p className="mt-2 text-sm leading-relaxed text-ink-2">
-                  This workflow reacts to failures in your other workflows, so there&apos;s nothing to run from a browser. Import it and set it as the
-                  error workflow in each production workflow&apos;s settings.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <aside className="space-y-6">
-            <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="label">How it works</h2>
-              <ol className="mt-4 space-y-4">
-                {w.steps.map((s, n) => (
-                  <li key={n} className="flex gap-3 text-sm leading-relaxed text-ink-2">
-                    <span className="grid size-6 shrink-0 place-items-center rounded-md border border-line bg-bg-2 font-mono text-[0.6875rem] text-amber">{n + 1}</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-            <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="label">Business outcomes</h2>
-              <ul className="mt-3 space-y-2">
-                {w.outcomes.map((o) => (
-                  <li key={o} className="flex items-start gap-2 text-sm text-ink">
-                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-good" aria-hidden /> {o}
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="label">You&apos;ll need</h2>
-              <ul className="mt-3 flex flex-wrap gap-1.5">
-                {w.needs.map((n) => (
-                  <li key={n} className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg-2 px-2.5 py-1 text-xs text-ink-2">
-                    <KeyRoundIcon className="size-3 text-ink-3" aria-hidden /> {n}
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <Link
-              href={`/workflows/${next.slug}`}
-              className="group flex items-center justify-between rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-2"
-            >
-              <span>
-                <span className="label">Next workflow</span>
-                <span className="mt-1 block font-medium">{next.title}</span>
-              </span>
-              <ArrowRightIcon className="size-5 text-ink-3 transition-transform group-hover:translate-x-1" aria-hidden />
-            </Link>
-          </aside>
         </div>
+        <figcaption className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-1 text-xs text-ink-3">
+          <span>
+            n8n 2.40 editor · <span className="font-mono">{w.file}</span>
+          </span>
+          <span>Imports with one click</span>
+        </figcaption>
+      </figure>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <div className="min-w-0">
+          {w.demo ? (
+            <Playground w={w} />
+          ) : (
+            <div className="rounded-tile bg-inverse px-6 pt-8 pb-8 text-inverse-foreground sm:px-7">
+              <h2 className="text-2xl font-semibold">No live demo</h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-inverse-muted">
+                This workflow reacts to failures in your other workflows, so there&apos;s nothing to run from a browser. Import it and set it as the error
+                workflow in each production workflow&apos;s settings.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <aside className="grid content-start gap-5">
+          <section className="rounded-tile bg-surface px-5 pt-7 pb-6 sm:px-7">
+            <h2 className="text-2xl font-semibold">How it works</h2>
+            <ol className="mt-5 space-y-4">
+              {w.steps.map((s, n) => (
+                <li key={n} className="flex gap-3.5 text-sm leading-relaxed">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-xs font-semibold tabular">{n + 1}</span>
+                  <span className="pt-1">{s}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="rounded-tile bg-surface px-5 pt-7 pb-6 sm:px-7">
+            <h2 className="text-2xl font-semibold">Business outcomes</h2>
+            <ul className="mt-5 grid gap-2">
+              {w.outcomes.map((o) => (
+                <li key={o} className="flex items-start gap-3 rounded-[1.25rem] bg-raised px-4 py-3 text-sm">
+                  <CheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden /> {o}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="rounded-tile bg-surface px-5 pt-7 pb-6 sm:px-7">
+            <h2 className="text-2xl font-semibold">You&apos;ll need</h2>
+            <ul className="mt-5 flex flex-wrap gap-1.5">
+              {w.needs.map((n) => (
+                <li key={n} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-raised px-3.5 text-xs font-medium">
+                  <KeyRoundIcon className="size-3.5 text-ink-3" aria-hidden /> {n}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <Link
+            href={`/workflows/${next.slug}`}
+            className="group flex items-center gap-4 rounded-full bg-surface p-2 pr-6 transition-colors hover:bg-ink/10"
+          >
+            <span className="grid size-16 shrink-0 place-items-center rounded-full bg-ink text-bg">
+              <ArrowRightIcon className="size-6 transition-transform group-hover:translate-x-0.5" strokeWidth={1.6} aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm text-ink-3">Next workflow</span>
+              <span className="block truncate text-lg font-semibold">{next.title}</span>
+            </span>
+          </Link>
+        </aside>
       </div>
     </>
   );

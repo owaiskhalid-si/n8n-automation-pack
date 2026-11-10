@@ -1,16 +1,19 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import { site } from "@/lib/site";
 import { ThemeToggle } from "./theme";
 
+/** Three nodes on a wire, the middle one live. Drawn white inside an ink circle. */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 28 28" className={className} aria-hidden="true">
-      <rect x="1" y="1" width="26" height="26" rx="7" className="fill-raised stroke-line-2" strokeWidth="1.5" />
-      <path d="M8 18.5c3 0 3-9 6-9s3 9 6 9" fill="none" className="stroke-ink-3" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="8" cy="18.5" r="2.4" className="fill-ink" />
-      <circle cx="14" cy="9.5" r="2.4" className="fill-amber-fill" />
-      <circle cx="20" cy="18.5" r="2.4" className="fill-ink" />
-    </svg>
+    <span className={`grid shrink-0 place-items-center rounded-full bg-ink ${className ?? "size-10"}`} aria-hidden="true">
+      <svg viewBox="0 0 28 28" className="size-[62%]">
+        <path d="M6 18c3.5 0 4-8 8-8s4.5 8 8 8" fill="none" className="stroke-bg" strokeOpacity={0.55} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="6" cy="18" r="2.6" className="fill-bg" />
+        <circle cx="14" cy="10" r="3" className="fill-signal" />
+        <circle cx="22" cy="18" r="2.6" className="fill-bg" />
+      </svg>
+    </span>
   );
 }
 
@@ -30,66 +33,82 @@ const nav = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-15 max-w-[1280px] items-center gap-6 px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5" aria-label={`${site.name} home`}>
-          <LogoMark className="size-7" />
-          <span className="text-[1.05rem] font-semibold tracking-tight">{site.name}</span>
-          <span className="hidden rounded-md border border-line px-1.5 py-0.5 font-mono text-[0.625rem] text-ink-3 sm:inline">n8n pack</span>
+    <header className="mb-5">
+      <div className="flex items-center gap-3">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={`${site.name} home`}>
+          <LogoMark className="size-10" />
+          <span className="text-lg font-semibold tracking-tight">{site.name}</span>
         </Link>
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Sections">
+        <nav className="mx-auto hidden h-12 items-center gap-1 rounded-full bg-surface p-1 md:flex" aria-label="Sections">
           {nav.map((n) => (
-            <Link key={n.href} href={n.href} className="rounded-lg px-3 py-1.5 text-sm text-ink-2 transition-colors hover:bg-raised hover:text-ink">
+            <Link
+              key={n.href}
+              href={n.href}
+              className="inline-flex h-full items-center rounded-full px-5 text-sm font-medium text-ink-3 transition-colors hover:bg-raised hover:text-ink"
+            >
               {n.label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2 md:ml-0">
           {site.repoUrl && (
             <a
               href={site.repoUrl}
               target="_blank"
               rel="noreferrer"
-              className="grid size-9 place-items-center rounded-lg text-ink-2 transition-colors hover:bg-raised hover:text-ink"
+              className="grid size-11 place-items-center rounded-full bg-surface transition-colors hover:bg-ink/10"
               aria-label="Source on GitHub"
             >
-              <GithubIcon className="size-4" />
+              <GithubIcon className="size-[18px]" />
             </a>
           )}
           <ThemeToggle />
+          <Link
+            href="/workflows/lead-qualifier"
+            className="hidden h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-bg transition-colors hover:bg-ink/85 active:scale-[0.98] sm:inline-flex"
+          >
+            Try a live demo <ArrowRightIcon className="size-4" aria-hidden />
+          </Link>
         </div>
       </div>
+      <nav className="scrollbar-none -mx-5 mt-4 flex gap-2 overflow-x-auto px-5 md:hidden" aria-label="Sections">
+        {nav.map((n) => (
+          <Link key={n.href} href={n.href} className="inline-flex h-10 shrink-0 items-center rounded-full bg-surface px-4 text-sm font-medium">
+            {n.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }
 
 export function SiteFooter() {
   return (
-    <footer className="mt-28 border-t border-line">
-      <div className="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-10 text-sm text-ink-3 sm:px-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2.5">
-          <LogoMark className="size-6" />
-          <span className="text-ink-2">{site.name}</span>
-          <span>· n8n 2.40 · Gemini · Next.js 16 · Oracle Cloud</span>
+    <footer className="mt-5 flex flex-col gap-6 rounded-tile bg-surface px-6 py-10 text-sm sm:px-10 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-3">
+        <LogoMark className="size-10" />
+        <div>
+          <p className="text-base font-semibold">{site.name}</p>
+          <p className="text-ink-3">n8n 2.40 · Gemini · Next.js 16 · Oracle Cloud</p>
         </div>
-        <p>
-          Demo runs never send emails, messages or create records.
-          {site.authorName && (
-            <>
-              {" "}
-              Built by{" "}
-              {site.authorUrl ? (
-                <a className="text-ink-2 underline decoration-line-2 underline-offset-4 hover:text-ink" href={site.authorUrl}>
-                  {site.authorName}
-                </a>
-              ) : (
-                <span className="text-ink-2">{site.authorName}</span>
-              )}
-              .
-            </>
-          )}
-        </p>
       </div>
+      <p className="max-w-md text-ink-3 md:text-right">
+        Demo runs never send emails, messages or create records.
+        {site.authorName && (
+          <>
+            {" "}
+            Built by{" "}
+            {site.authorUrl ? (
+              <a className="font-medium text-ink underline decoration-ink/20 underline-offset-4 hover:decoration-ink" href={site.authorUrl}>
+                {site.authorName}
+              </a>
+            ) : (
+              <span className="font-medium text-ink">{site.authorName}</span>
+            )}
+            .
+          </>
+        )}
+      </p>
     </footer>
   );
 }
